@@ -217,18 +217,30 @@ describe("reflect apply", () => {
 });
 
 describe("reflect", () => {
-  test("two hundred summaries stay newest-first inside the documented summary cap", () => {
+  test("two hundred summaries keep the newest inside the documented summary cap, oldest first", () => {
     const summaries = Array.from({ length: 200 }, (_, index) => ({
       memory_session_id: index.toString(16).padStart(8, "0"),
-      request: `${index}:` + "r".repeat(1000),
+      request: `#${index}#` + "r".repeat(1000),
       completed: "c".repeat(1000),
       next_steps: "n".repeat(1000),
     }));
     const formatted = formatSummaries(summaries);
     expect(formatted.length).toBeLessThanOrEqual(SUMMARY_CHARS);
-    expect(formatted).toContain("199:");
-    expect(formatted).not.toContain("0:rr");
+    expect(formatted).not.toContain("#0#");
+    const kept = [...formatted.matchAll(/#(\d+)#/g)].map((match) => Number(match[1]));
+    expect(kept.length).toBeGreaterThan(1);
+    expect(kept).toEqual(Array.from({ length: kept.length }, (_, offset) => 200 - kept.length + offset));
     expect(reflectPrompt(testContext(), "", [], summaries).length).toBeLessThan(INPUT_CHARS);
+  });
+
+  test("one oversized newest summary is cut instead of hiding every summary", () => {
+    const formatted = formatSummaries([
+      { memory_session_id: "aaaaaaaa", request: "older request", completed: "older done", next_steps: "" },
+      { memory_session_id: "bbbbbbbb", request: "newest request", completed: "c".repeat(21_000), next_steps: "" },
+    ]);
+    expect(formatted.length).toBeLessThanOrEqual(SUMMARY_CHARS);
+    expect(formatted.indexOf("older request")).toBeGreaterThanOrEqual(0);
+    expect(formatted.indexOf("newest request")).toBeGreaterThan(formatted.indexOf("older request"));
   });
 
   test("a cold ledger starts from the newest observations and cites only what it was shown", () => {

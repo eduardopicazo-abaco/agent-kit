@@ -66,18 +66,19 @@ export function fetchNew(
   return out.sort((a, b) => a.id - b.id);
 }
 
+/** Session id plus request, completed and next steps, each cut at 600 characters. The newest rows under the cap, returned oldest first. */
 export function formatSummaries(rows: readonly SummaryRow[], cap = SUMMARY_CHARS): string {
-  if (rows.length === 0) return "(none)";
   const out: string[] = [];
   let used = 0;
   for (const row of rows.toReversed()) {
-    const text = `${sid8(row.memory_session_id)}\n  request: ${row.request ?? ""}\n  completed: ${row.completed ?? ""}\n  next: ${row.next_steps ?? ""}`;
+    const field = (value: string | null) => (value ?? "").slice(0, 600);
+    const text = `${sid8(row.memory_session_id)}\n  request: ${field(row.request)}\n  completed: ${field(row.completed)}\n  next: ${field(row.next_steps)}`;
     const added = text.length + (out.length === 0 ? 0 : 1);
     if (used + added > cap) break;
     out.push(text);
     used += added;
   }
-  return out.length > 0 ? out.join("\n") : "(none)";
+  return out.length > 0 ? out.reverse().join("\n") : "(none)";
 }
 
 export function outputContract(cap: number, today: string): string {
@@ -105,7 +106,7 @@ export function reflectPrompt(
     outputContract(ctx.config.memoryTokens, today),
     [
       { title: "Previous memory", body: previous.trim() || "(empty)" },
-      { title: "New session summaries", body: formatSummaries(summaries) },
+      { title: "New session summaries (oldest first)", body: formatSummaries(summaries) },
       { title: "New observations (oldest first)", body: observations.map(formatObservation).join("") || "(none)" },
     ],
     ctx.env,
