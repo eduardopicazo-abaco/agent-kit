@@ -83,7 +83,9 @@ describe("setup doctor", () => {
 
   test("checks the scheduled default judge's auth without making a judge call", () => {
     const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
-    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: "", HOME: deps.home } });
+    const ctx = testContext({
+      env: { CLAUDE_CONFIG_DIR: "", HOME: deps.home, PATH: "/bin", ANTHROPIC_API_KEY: "operator-only" },
+    });
     expect(doctor(ctx, deps)).toBe(0);
     expect(ctx.out).toContain("  scheduled judge auth      OK       soft  logged in");
     expect(ctx.prompts).toEqual([]);
@@ -91,6 +93,10 @@ describe("setup doctor", () => {
     expect(probe).toBeGreaterThanOrEqual(0);
     expect(deps.envs[probe]).toBeDefined();
     expect(deps.envs[probe]).not.toHaveProperty("CLAUDE_CONFIG_DIR");
+    expect(deps.envs[probe]).not.toHaveProperty("ANTHROPIC_API_KEY");
+    expect(deps.envs[probe]?.HOME).toBe(deps.home);
+    expect(deps.envs[probe]?.PATH).toBe("/bin");
+    expect(deps.envs[probe]?.AK_LEARN_MEM_DB).toBe(ctx.env.AK_LEARN_MEM_DB);
   });
 
   test("the scheduled auth check keeps the config dir the operator's environment sets", () => {

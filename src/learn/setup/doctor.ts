@@ -25,6 +25,9 @@ export function judgeBinary(ctx: LearnContext, deps: SetupDeps): string | null {
   return deps.which(bin);
 }
 
+/** What a scheduler gives a unit before the unit's own environment is applied. */
+const SCHEDULER_BASE = ["HOME", "USER", "LOGNAME"];
+
 function scheduledJudgeAuth(ctx: LearnContext, deps: SetupDeps): Check | null {
   if (
     ctx.config.judgeCommand.length !== DEFAULT_JUDGE.length ||
@@ -36,12 +39,11 @@ function scheduledJudgeAuth(ctx: LearnContext, deps: SetupDeps): Check | null {
   if (binary === null) {
     return { name: "scheduled judge auth", ok: false, hard: false, why: "judge command is unavailable" };
   }
-  const env = { ...ctx.env };
-  const scheduled = new Map(unitEnvironment(ctx));
-  const configDir = scheduled.get("CLAUDE_CONFIG_DIR");
-  if (configDir === undefined) delete env.CLAUDE_CONFIG_DIR;
-  else env.CLAUDE_CONFIG_DIR = configDir;
-  env.PATH = scheduled.get("PATH");
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of SCHEDULER_BASE) {
+    if (ctx.env[key] !== undefined) env[key] = ctx.env[key];
+  }
+  for (const [key, value] of unitEnvironment(ctx)) env[key] = value;
   const result = deps.run([binary, "auth", "status"], { env });
   const loggedIn = result.code === 0 && /"loggedIn"\s*:\s*true/.test(result.stdout);
   return {
