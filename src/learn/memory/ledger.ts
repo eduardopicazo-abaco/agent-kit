@@ -59,8 +59,12 @@ const SEED: Readonly<Record<string, string>> = {
 export interface MemoryState {
   last_obs_id_reflected?: number;
   last_reflect?: number;
+  last_reflect_attempt?: number;
+  reflect_failures?: number;
   /** Local calendar date of the last nightly run. */
   last_nightly?: string;
+  last_nightly_attempt?: number;
+  nightly_failures?: number;
   last_weekly?: number;
   muted?: boolean;
 }

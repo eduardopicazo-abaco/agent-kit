@@ -74,6 +74,27 @@ describe("setup doctor", () => {
     expect(doctor(context(deps, { AK_LEARN_JUDGE: judge }), deps)).toBe(0);
     expect(doctor(context(deps, { AK_LEARN_JUDGE: `${judge}.missing` }), deps)).toBe(1);
   });
+
+  test("checks the scheduled default judge's auth without making a judge call", () => {
+    const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
+    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: join(deps.home, ".claude"), HOME: deps.home } });
+    expect(doctor(ctx, deps)).toBe(0);
+    expect(ctx.out).toContain("  scheduled judge auth      OK       soft  logged in");
+    expect(ctx.prompts).toEqual([]);
+    expect(deps.calls).toContainEqual(["/usr/bin/claude", "auth", "status"]);
+  });
+
+  test("a live judge probe runs only behind the explicit flag", () => {
+    const deps = fakeDeps(["bun", "git", "judge"]);
+    const ctx = testContext({
+      env: { AK_LEARN_JUDGE: "judge", CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "" },
+      replies: [{ ok: true }],
+    });
+    expect(doctor(ctx, deps)).toBe(0);
+    expect(ctx.prompts).toEqual([]);
+    expect(doctor(ctx, deps, { liveJudge: true })).toBe(0);
+    expect(ctx.prompts).toHaveLength(1);
+  });
 });
 
 describe("setup seed", () => {

@@ -8,9 +8,29 @@
   "properties": {
     "last_obs_id_reflected": { "type": "integer", "minimum": 0 },
     "last_reflect": { "description": "Epoch milliseconds.", "type": "integer", "minimum": 0 },
+    "last_reflect_attempt": {
+      "description": "Epoch milliseconds of the latest failed or rejected reflection.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "reflect_failures": {
+      "description": "Consecutive failed or rejected reflections.",
+      "type": "integer",
+      "minimum": 1
+    },
     "last_nightly": {
       "description": "Local calendar date of the last nightly run.",
       "$ref": "common.schema.json#/$defs/date"
+    },
+    "last_nightly_attempt": {
+      "description": "Epoch milliseconds of the latest failed nightly run.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "nightly_failures": {
+      "description": "Consecutive failed nightly runs.",
+      "type": "integer",
+      "minimum": 1
     },
     "last_weekly": { "description": "Epoch milliseconds.", "type": "integer", "minimum": 0 },
     "muted": { "type": "boolean" }

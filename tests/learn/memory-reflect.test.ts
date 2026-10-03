@@ -7,8 +7,22 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readJsonl } from "../../src/learn/core/store.ts";
-import { citedIds, ensureMemoryLedger, provenanceGate, readState, SECTIONS } from "../../src/learn/memory/ledger.ts";
-import { applyReflection, reflect } from "../../src/learn/memory/reflect.ts";
+import {
+  citedIds,
+  ensureMemoryLedger,
+  provenanceGate,
+  readState,
+  saveState,
+  SECTIONS,
+} from "../../src/learn/memory/ledger.ts";
+import {
+  applyReflection,
+  formatSummaries,
+  INPUT_CHARS,
+  reflect,
+  reflectPrompt,
+  SUMMARY_CHARS,
+} from "../../src/learn/memory/reflect.ts";
 import { ClaudeMemSource } from "../../src/learn/sources/claude-mem.ts";
 import { MemFixture, scratch, testContext } from "./helpers.ts";
 
@@ -174,15 +188,19 @@ describe("reflect apply", () => {
 
   test("a rejection marks an attempt so it cannot re-fire every tick", () => {
     const { ledger } = setup();
+    const commits = ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim();
     applyReflection(ledger, "not a memory at all", new Set(["obs:20"]), 20_000, 20, CAP);
     const state = readState(ledger);
     expect(state.last_reflect).toBeGreaterThan(0);
+    expect(state.reflect_failures).toBe(1);
     expect(state.last_obs_id_reflected).toBeUndefined();
     expect(readJsonl<{ status: string }>(ledger.path("runs.jsonl")).at(-1)?.status).toBe("rejected");
+    expect(ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim()).toBe(commits);
   });
 
   test("a valid reply replaces memory and bumps the watermark", () => {
     const { ledger, memory } = setup();
+    saveState(ledger, { last_reflect_attempt: 1, reflect_failures: 3 });
     const result = applyReflection(ledger, VALID, new Set(["obs:20", "S4cdc376a-3b10"]), 20_000, 20, CAP);
     expect([result.ok, result.reason, result.dropped]).toEqual([true, null, 1]);
     const text = memory();
@@ -190,6 +208,7 @@ describe("reflect apply", () => {
     expect(text).toContain("- older memory id is still acceptable [obs:10]");
     expect(text).not.toContain("obs:999");
     expect(readState(ledger).last_obs_id_reflected).toBe(20);
+    expect(readState(ledger).reflect_failures).toBeUndefined();
     const last = readJsonl<{ job: string; status: string; dropped_by_provenance: number }>(
       ledger.path("runs.jsonl"),
     ).at(-1)!;
@@ -198,6 +217,20 @@ describe("reflect apply", () => {
 });
 
 describe("reflect", () => {
+  test("two hundred summaries stay newest-first inside the documented summary cap", () => {
+    const summaries = Array.from({ length: 200 }, (_, index) => ({
+      memory_session_id: index.toString(16).padStart(8, "0"),
+      request: `${index}:` + "r".repeat(1000),
+      completed: "c".repeat(1000),
+      next_steps: "n".repeat(1000),
+    }));
+    const formatted = formatSummaries(summaries);
+    expect(formatted.length).toBeLessThanOrEqual(SUMMARY_CHARS);
+    expect(formatted).toContain("199:");
+    expect(formatted).not.toContain("0:rr");
+    expect(reflectPrompt(testContext(), "", [], summaries).length).toBeLessThan(INPUT_CHARS);
+  });
+
   test("a cold ledger starts from the newest observations and cites only what it was shown", () => {
     const dir = scratch();
     const dbPath = join(dir, "mem.db");
@@ -243,7 +276,8 @@ describe("reflect", () => {
     } finally {
       source.close();
     }
-    expect(readState(ledger).last_reflect).toBeGreaterThan(0);
+    expect(readState(ledger).last_reflect_attempt).toBeGreaterThan(0);
+    expect(readState(ledger).reflect_failures).toBe(1);
     expect(readJsonl<{ status: string }>(ledger.path("runs.jsonl")).at(-1)?.status).toBe("failed");
   });
 });

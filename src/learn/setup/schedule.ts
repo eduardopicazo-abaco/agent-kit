@@ -2,14 +2,15 @@
  * `ak learn setup schedule` — the scheduler unit that runs `ak learn memory tick`.
  *
  * launchd on macOS, a systemd user timer where `systemctl` exists, otherwise a
- * cron line to add by hand. `CLAUDE_CONFIG_DIR` and `PATH` are baked into the
- * unit because a scheduler starts with neither, and a tick that resolves the
- * wrong config dir writes to a ledger nobody reads. The unit carries no
+ * cron line to add by hand. `PATH` and a non-default `CLAUDE_CONFIG_DIR` are
+ * baked into the unit because a scheduler starts with neither. The default
+ * config path stays implicit so the judge uses the operator's normal login.
+ * The unit carries no
  * sandboxing directive such as `ProtectHome`: the tick must read claude-mem's
  * database under the home directory.
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { LearnContext } from "../core/context.ts";
 import type { SetupDeps } from "./wire.ts";
 import { shellQuote } from "./wire.ts";
@@ -52,11 +53,12 @@ export function schedulerLog(ctx: LearnContext): string {
 const PASSTHROUGH = ["CLAUDE_MEM_DATA_DIR", "CODEX_HOME"];
 
 /** The unit's environment, in a stable order. */
-export function unitEnvironment(ctx: LearnContext): Array<[string, string]> {
-  const out: Array<[string, string]> = [
-    ["CLAUDE_CONFIG_DIR", ctx.config.configDir],
-    ["PATH", ctx.env.PATH && ctx.env.PATH !== "" ? ctx.env.PATH : "/usr/local/bin:/usr/bin:/bin"],
-  ];
+export function unitEnvironment(ctx: LearnContext, deps: SetupDeps): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
+  if (resolve(ctx.config.configDir) !== resolve(deps.home, ".claude")) {
+    out.push(["CLAUDE_CONFIG_DIR", ctx.config.configDir]);
+  }
+  out.push(["PATH", ctx.env.PATH && ctx.env.PATH !== "" ? ctx.env.PATH : "/usr/local/bin:/usr/bin:/bin"]);
   const extra = Object.keys(ctx.env)
     .filter((key) => PASSTHROUGH.includes(key) || key.startsWith("AK_LEARN_"))
     .sort();
@@ -89,7 +91,7 @@ export function launchdPlist(ctx: LearnContext, deps: SetupDeps, intervalS: numb
       .map((arg) => `    <string>${xml(arg)}</string>`)
       .join("\n"),
     interval: intervalS,
-    environment: unitEnvironment(ctx)
+    environment: unitEnvironment(ctx, deps)
       .map(([key, value]) => `    <key>${xml(key)}</key>\n    <string>${xml(value)}</string>`)
       .join("\n"),
     log: xml(schedulerLog(ctx)),
@@ -105,7 +107,7 @@ function systemdQuote(arg: string): string {
 export function systemdService(ctx: LearnContext, deps: SetupDeps): string {
   return renderTemplate("systemd.service.tmpl", {
     exec: tickArgv(deps).map(systemdQuote).join(" "),
-    environment: unitEnvironment(ctx)
+    environment: unitEnvironment(ctx, deps)
       .map(([key, value]) => `Environment=${systemdQuote(`${key}=${value}`)}`)
       .join("\n"),
     log: systemdQuote(schedulerLog(ctx)),
@@ -124,7 +126,7 @@ export function cronLine(ctx: LearnContext, deps: SetupDeps, intervalS: number):
   const minutes = Math.max(1, Math.round(intervalS / 60));
   const when =
     minutes < 60 ? `*/${minutes} * * * *` : `0 */${Math.max(1, Math.min(23, Math.round(minutes / 60)))} * * *`;
-  const env = unitEnvironment(ctx).map(([key, value]) => `${key}=${shellQuote(value)}`);
+  const env = unitEnvironment(ctx, deps).map(([key, value]) => `${key}=${shellQuote(value)}`);
   const command = `${[...env, ...tickArgv(deps).map(shellQuote)].join(" ")} >> ${shellQuote(schedulerLog(ctx))} 2>&1`;
   return `${when} ${command.replace(/%/g, "\\%")}`;
 }

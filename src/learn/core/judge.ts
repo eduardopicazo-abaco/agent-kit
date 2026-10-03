@@ -7,6 +7,7 @@
  * deterministic gates before it touches a ledger; the judge never sets counts,
  * status, ids or rates.
  */
+import { mkdirSync } from "node:fs";
 import type { LearnConfig } from "./config.ts";
 import { run } from "./proc.ts";
 
@@ -63,12 +64,18 @@ export function declaredUnavailable(reply: Record<string, unknown> | null): stri
 /** A judge bound to the configured command. One retry on an empty, failed or unparseable reply. */
 export function commandJudge(config: LearnConfig): JudgeFn {
   return (prompt: string) => {
+    mkdirSync(config.runtimeDir, { recursive: true });
     const env: NodeJS.ProcessEnv = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (!NESTED_SESSION_VARS.includes(key)) env[key] = value;
     }
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const result = run(config.judgeCommand, { input: prompt, env, timeoutMs: config.judgeTimeoutMs });
+      const result = run(config.judgeCommand, {
+        cwd: config.runtimeDir,
+        input: prompt,
+        env,
+        timeoutMs: config.judgeTimeoutMs,
+      });
       if (result.timedOut) return null;
       if (result.code !== 0) continue;
       const parsed = extractJson(result.stdout);

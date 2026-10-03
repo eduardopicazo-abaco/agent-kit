@@ -20,7 +20,7 @@ export interface SetupDeps {
   home: string;
   platform: NodeJS.Platform;
   uid: number;
-  run: (cmd: readonly string[]) => RunResult;
+  run: (cmd: readonly string[], options?: { env?: NodeJS.ProcessEnv }) => RunResult;
   which: (bin: string) => string | null;
   /** The argv prefix that runs `ak`: bun, then `<package root>/src/cli.ts`. */
   ak: string[];
@@ -33,7 +33,7 @@ export function defaultDeps(ctx: LearnContext): SetupDeps {
     home: ctx.env.HOME && ctx.env.HOME !== "" ? ctx.env.HOME : homedir(),
     platform: process.platform,
     uid: process.getuid?.() ?? 0,
-    run: (cmd) => run(cmd, { timeoutMs: 60_000, env: ctx.env }),
+    run: (cmd, options) => run(cmd, { timeoutMs: 60_000, env: options?.env ?? ctx.env }),
     which,
     ak: [which("bun") ?? "bun", join(PACKAGE_ROOT, "src", "cli.ts")],
     packageRoot: PACKAGE_ROOT,

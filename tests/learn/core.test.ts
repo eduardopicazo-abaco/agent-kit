@@ -44,6 +44,7 @@ describe("config", () => {
     expect(config.judgeCommand).toEqual(DEFAULT_JUDGE);
     expect(config.judgeCommand).not.toContain("--model");
     expect(config.judgeCommand).not.toContain("--bare");
+    expect(config.judgeCommand).toContain("--no-session-persistence");
   });
 
   test("the default judge has no tools and no MCP servers", () => {
@@ -89,6 +90,16 @@ describe("declared unavailable", () => {
     expect(declaredUnavailable({ unavailable: "why" })).toBe("why");
     expect(declaredUnavailable({ unavailable: "why", memory: "m" })).toBeNull();
     expect(declaredUnavailable(null)).toBeNull();
+  });
+
+  test("a judge runs from the runtime directory instead of inheriting the caller's cwd", () => {
+    const dir = scratch();
+    const seen = join(dir, "cwd");
+    const script = join(dir, "judge.sh");
+    writeFileSync(script, `pwd > '${seen}'\necho '{"ok": true}'\n`);
+    const config = { ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }), judgeCommand: ["sh", script] };
+    expect(commandJudge(config)("prompt")).toEqual({ ok: true });
+    expect(readFileSync(seen, "utf8").trim()).toBe(config.runtimeDir);
   });
 });
 

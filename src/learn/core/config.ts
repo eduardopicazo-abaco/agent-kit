@@ -49,6 +49,7 @@ export const DEFAULT_JUDGE = [
   "--strict-mcp-config",
   "--settings",
   '{"disableAllHooks":true}',
+  "--no-session-persistence",
   "--output-format",
   "json",
 ];

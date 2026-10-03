@@ -9,8 +9,8 @@
  *
  * The first reflect on a cold ledger reads the newest observations that fit
  * and sets the watermark past everything older, so memory starts from the
- * present rather than replaying history. A rejected or failed attempt still
- * sets `last_reflect`, so one bad reply cannot re-fire on every tick.
+ * present rather than replaying history. Rejected and failed attempts keep a
+ * separate exponential backoff without advancing the observation watermark.
  */
 import { existsSync, writeFileSync } from "node:fs";
 import type { LearnContext } from "../core/context.ts";
@@ -32,6 +32,8 @@ import {
 import { parseSecurityNotes, redact, SECURITY_KINDS, securityRecord, withSecurityRecord } from "./redact.ts";
 
 export const INPUT_CHARS = 60_000;
+/** Session summaries are a second input channel; keep their newest entries inside this independent cap. */
+export const SUMMARY_CHARS = 20_000;
 
 /** Observation id, time, type, session, title, subtitle, and facts cut at 600 characters. */
 export function formatObservation(row: ObservationRow): string {
@@ -64,14 +66,18 @@ export function fetchNew(
   return out.sort((a, b) => a.id - b.id);
 }
 
-export function formatSummaries(rows: readonly SummaryRow[]): string {
+export function formatSummaries(rows: readonly SummaryRow[], cap = SUMMARY_CHARS): string {
   if (rows.length === 0) return "(none)";
-  return rows
-    .map(
-      (row) =>
-        `${sid8(row.memory_session_id)}\n  request: ${row.request ?? ""}\n  completed: ${row.completed ?? ""}\n  next: ${row.next_steps ?? ""}`,
-    )
-    .join("\n");
+  const out: string[] = [];
+  let used = 0;
+  for (const row of rows.toReversed()) {
+    const text = `${sid8(row.memory_session_id)}\n  request: ${row.request ?? ""}\n  completed: ${row.completed ?? ""}\n  next: ${row.next_steps ?? ""}`;
+    const added = text.length + (out.length === 0 ? 0 : 1);
+    if (used + added > cap) break;
+    out.push(text);
+    used += added;
+  }
+  return out.length > 0 ? out.join("\n") : "(none)";
 }
 
 export function outputContract(cap: number, today: string): string {
@@ -129,7 +135,14 @@ export function degenerate(
 
 /** Record an attempt for scheduling without advancing the observation watermark. */
 function markAttempt(ledger: Ledger): void {
-  saveState(ledger, { ...readState(ledger), last_reflect: nowMs() });
+  const state = readState(ledger);
+  const attempted = nowMs();
+  saveState(ledger, {
+    ...state,
+    last_reflect: attempted,
+    last_reflect_attempt: attempted,
+    reflect_failures: (state.reflect_failures ?? 0) + 1,
+  });
 }
 
 export interface ReflectResult {
@@ -214,14 +227,14 @@ export function applyReflection(
     markAttempt(ledger);
     appendRun(ledger, { job: "reflect", status: "rejected", reason, ...outcome, ...meta });
     logLine(ledger, `reflect rejected: ${reason}`);
-    ledger.commit(`reflect rejected: ${reason}`);
     return { ok: false, reason, dropped, redacted };
   }
   writeFileSync(memoryPath, text);
   const state = readState(ledger);
+  const { last_reflect_attempt: _attempt, reflect_failures: _failures, ...withoutBackoff } = state;
   saveState(ledger, {
-    ...state,
-    last_obs_id_reflected: Math.max(state.last_obs_id_reflected ?? 0, maxObsId),
+    ...withoutBackoff,
+    last_obs_id_reflected: Math.max(withoutBackoff.last_obs_id_reflected ?? 0, maxObsId),
     last_reflect: nowMs(),
   });
   appendRun(ledger, {
@@ -265,7 +278,6 @@ export function reflect(
     markAttempt(ledger);
     appendRun(ledger, { job: "reflect", status: "failed", reason: "no judge output", trigger });
     logLine(ledger, "reflect failed: no judge output");
-    ledger.commit("reflect failed: no judge output");
     return "reflect: judge call failed";
   }
   const valid = new Set([...observations.map((row) => `obs:${row.id}`), ...sids.map(sid8)]);

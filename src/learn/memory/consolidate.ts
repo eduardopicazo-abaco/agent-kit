@@ -438,9 +438,14 @@ export function consolidate(
   const runId = `nightly-${todayLocal()}-${nowMs() % 100_000}`;
   const reply = ctx.judge(prompt);
   if (reply === null) {
+    const state = readState(ledger);
+    saveState(ledger, {
+      ...state,
+      last_nightly_attempt: nowMs(),
+      nightly_failures: (state.nightly_failures ?? 0) + 1,
+    });
     appendRun(ledger, { job: "nightly", status: "failed", reason: "no judge output", trigger });
     logLine(ledger, "nightly failed: no judge output");
-    ledger.commit("nightly failed: no judge output");
     return "nightly: judge call failed";
   }
   const includedSids = new Set(included.map((episode) => episode.sid));
@@ -466,7 +471,9 @@ export function consolidate(
     if ("ref" in proposal) proposals.push(proposal.ref);
     else skippedProposals.push(proposal.skipped);
   }
-  saveState(ledger, { ...readState(ledger), last_nightly: todayLocal() });
+  const state = readState(ledger);
+  const { last_nightly_attempt: _attempt, nightly_failures: _failures, ...withoutBackoff } = state;
+  saveState(ledger, { ...withoutBackoff, last_nightly: todayLocal() });
   const log = typeof reply.log === "string" ? reply.log : "";
   const run = {
     job: "nightly",

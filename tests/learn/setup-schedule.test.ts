@@ -13,6 +13,7 @@ import {
   schedule,
   systemdService,
   systemdTimer,
+  unitEnvironment,
   unitPaths,
 } from "../../src/learn/setup/schedule.ts";
 import type { SetupDeps } from "../../src/learn/setup/wire.ts";
@@ -146,6 +147,22 @@ StandardError=append:/cfg/agent-kit/learn/scheduler.log
 });
 
 describe("paths", () => {
+  test("the scheduler omits an explicit config dir when it is the host default", () => {
+    const home = scratch("ak-home-");
+    const ctx = context({ CLAUDE_CONFIG_DIR: join(home, ".claude"), PATH: "/bin" });
+    expect(unitEnvironment(ctx, deps({ home }))).toEqual([["PATH", "/bin"]]);
+    expect(launchdPlist(ctx, deps({ home }), 900)).not.toContain("CLAUDE_CONFIG_DIR");
+  });
+
+  test("the scheduler keeps a non-default config dir", () => {
+    const home = scratch("ak-home-");
+    const config = scratch("ak-cfg-");
+    expect(unitEnvironment(context({ CLAUDE_CONFIG_DIR: config, PATH: "/bin" }), deps({ home }))).toContainEqual([
+      "CLAUDE_CONFIG_DIR",
+      config,
+    ]);
+  });
+
   test("the config dir follows the environment", () => {
     expect(loadConfig({ CLAUDE_CONFIG_DIR: "/somewhere/else" }).configDir).toBe("/somewhere/else");
     expect(loadConfig({}).configDir).toBe(join(homedir(), ".claude"));

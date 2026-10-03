@@ -32,6 +32,8 @@ export const ACTIVE_DAYS = 7;
 export const REFLECT_MAX_GAP_MS = 6 * 3600 * 1000;
 export const NIGHTLY_BACKLOG = 25;
 export const WEEK_MS = 7 * 86_400_000;
+export const FAILURE_BACKOFF_MIN_MS = 3_600_000;
+export const FAILURE_BACKOFF_MAX_MS = 24 * FAILURE_BACKOFF_MIN_MS;
 
 export interface DecideInput {
   state: MemoryState;
@@ -51,6 +53,14 @@ export interface Thresholds {
   nightlyHour: number;
 }
 
+function backoffElapsed(state: MemoryState, job: "reflect" | "nightly", now: number): boolean {
+  const failures = job === "reflect" ? state.reflect_failures : state.nightly_failures;
+  const attempted = job === "reflect" ? state.last_reflect_attempt : state.last_nightly_attempt;
+  if (!failures || attempted === undefined) return true;
+  const delay = Math.min(FAILURE_BACKOFF_MIN_MS * 2 ** (failures - 1), FAILURE_BACKOFF_MAX_MS);
+  return now - attempted >= delay;
+}
+
 /**
  * Which jobs are due. Pure.
  *
@@ -68,16 +78,18 @@ export function decide(input: DecideInput, thresholds: Thresholds): Job[] {
   const now = input.now.getTime();
   const lastReflect = input.state.last_reflect ?? 0;
   if (
-    (idle && input.newTokens >= thresholds.reflectTokens) ||
-    (input.newObs > 0 && now - lastReflect >= REFLECT_MAX_GAP_MS)
+    backoffElapsed(input.state, "reflect", now) &&
+    ((idle && input.newTokens >= thresholds.reflectTokens) ||
+      (input.newObs > 0 && now - lastReflect >= REFLECT_MAX_GAP_MS))
   )
     due.push("reflect");
   const today = todayLocal(input.now);
   if (
-    (input.now.getHours() >= thresholds.nightlyHour &&
+    backoffElapsed(input.state, "nightly", now) &&
+    ((input.now.getHours() >= thresholds.nightlyHour &&
       (input.state.last_nightly ?? "") < today &&
       input.unconsolidated >= 1) ||
-    (input.unconsolidated >= NIGHTLY_BACKLOG && idle)
+      (input.unconsolidated >= NIGHTLY_BACKLOG && idle))
   ) {
     due.push("nightly");
   }

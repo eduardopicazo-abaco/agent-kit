@@ -3,13 +3,19 @@
  * exits without opening claude-mem, forcing without a job runs every job, and
  * a scheduled tick that discovers a project and never writes inside it.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setSystemTime, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { acquireLock } from "../../src/learn/core/ledger.ts";
 import { tickLogPath } from "../../src/learn/core/paths.ts";
 import { readJsonl } from "../../src/learn/core/store.ts";
-import { memoryDir, type MemoryState } from "../../src/learn/memory/ledger.ts";
+import {
+  ensureMemoryLedger,
+  memoryDir,
+  readState,
+  saveState,
+  type MemoryState,
+} from "../../src/learn/memory/ledger.ts";
 import { readRegistry } from "../../src/learn/memory/registry.ts";
 import { decide, type DecideInput, tick } from "../../src/learn/memory/tick.ts";
 import { gitRepo, MemFixture, projectScratch, removeProjectScratch, scratch, testContext } from "./helpers.ts";
@@ -68,6 +74,25 @@ describe("decide", () => {
     expect(run({ muted: true }, NOON, { force: "all" })).toEqual(["reflect", "nightly", "weekly"]);
     expect(run({}, NOON, { force: "nightly" })).toEqual(["nightly"]);
   });
+
+  test("failed jobs back off exponentially and the reflect token clause respects it", () => {
+    const failed = {
+      ...fresh(),
+      last_reflect_attempt: NOON.getTime() - 30 * 60_000,
+      reflect_failures: 1,
+      last_nightly_attempt: NOON.getTime() - 30 * 60_000,
+      nightly_failures: 1,
+    };
+    expect(run(failed, NOON, { idleS: 600, newTokens: 30_000, newObs: 40, unconsolidated: 30 })).toEqual([]);
+    expect(
+      run(failed, new Date(NOON.getTime() + 31 * 60_000), {
+        idleS: 600,
+        newTokens: 30_000,
+        newObs: 40,
+        unconsolidated: 30,
+      }),
+    ).toEqual(["reflect", "nightly"]);
+  });
 });
 
 function fixtureProject() {
@@ -92,6 +117,31 @@ function fixtureProject() {
 afterAll(removeProjectScratch);
 
 describe("tick", () => {
+  test("an always-failing judge runs once per backoff window and never commits failures", () => {
+    const { root, ctx } = fixtureProject();
+    const ledger = ensureMemoryLedger(memoryDir(ctx.config, root));
+    const start = new Date(2026, 8, 18, 2, 10);
+    saveState(ledger, { last_nightly: "2026-09-17", last_weekly: start.getTime() });
+    ledger.commit("seed scheduler state");
+    try {
+      setSystemTime(start);
+      expect(tick(ctx)).toBe(0);
+      const commits = ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim();
+      for (let i = 1; i < 8; i += 1) {
+        setSystemTime(new Date(start.getTime() + i * 15 * 60_000));
+        expect(tick(ctx)).toBe(0);
+      }
+      const reflectCalls = ctx.prompts.filter((prompt) => prompt.includes("# learn/reflector")).length;
+      const nightlyCalls = ctx.prompts.filter((prompt) => prompt.includes("# learn/consolidator")).length;
+      expect(reflectCalls).toBeLessThanOrEqual(2);
+      expect(nightlyCalls).toBeLessThanOrEqual(2);
+      expect(ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim()).toBe(commits);
+      expect(readState(ledger)).toMatchObject({ reflect_failures: reflectCalls, nightly_failures: nightlyCalls });
+    } finally {
+      setSystemTime();
+    }
+  });
+
   test("a held lock exits 0 without opening claude-mem", () => {
     const ctx = testContext();
     mkdirSync(ctx.config.runtimeDir, { recursive: true });

@@ -27,7 +27,13 @@ import {
   unconsolidatedEpisodes,
   UNDONE_RUNS_FILE,
 } from "../../src/learn/memory/episodes.ts";
-import { ensureMemoryLedger, loadLessons, proposeConfirmed, readState } from "../../src/learn/memory/ledger.ts";
+import {
+  ensureMemoryLedger,
+  loadLessons,
+  proposeConfirmed,
+  readState,
+  saveState,
+} from "../../src/learn/memory/ledger.ts";
 import { lessonsBlock } from "../../src/learn/memory/session-context.ts";
 import { EVENTS_FILE, reviewLedger } from "../../src/learn/review/ledger.ts";
 import type { ReviewEvent } from "../../src/learn/review/events.ts";
@@ -338,6 +344,7 @@ describe("nightly", () => {
     const { ctx, root, ledger, review, source, o1, o2 } = nightlyFixture((first, second) => [
       confirmedReply(first, second),
     ]);
+    saveState(ledger, { last_nightly_attempt: 1, nightly_failures: 3 });
     const episodesBefore = readFileSync(ledger.path("episodes.jsonl"), "utf8");
     try {
       expect(consolidate(ctx, source, ledger, root, review)).toBe(
@@ -353,6 +360,7 @@ describe("nightly", () => {
     expect(marks.map((mark) => mark.sid).sort()).toEqual(["aaaa1111-0000", "bbbb2222-0000"]);
     expect(unconsolidatedEpisodes(ledger)).toEqual([]);
     expect(readState(ledger).last_nightly).toBe(todayLocal());
+    expect(readState(ledger).nightly_failures).toBeUndefined();
     expect(readdirSync(ledger.path("proposals"))).toEqual(["learn-shop-ls-001.json"]);
     const { draft } = readJson<{ draft: Record<string, unknown> }>(ledger.path("proposals", "learn-shop-ls-001.json"), {
       draft: {},
@@ -367,6 +375,20 @@ describe("nightly", () => {
     expect(readJsonl<ReviewEvent>(review.path(EVENTS_FILE)).map((event) => event.kind)).toEqual(["correction"]);
     expect(existsSync(join(root, ".claude"))).toBe(false);
     expect(ledger.git(["status", "--porcelain"]).stdout.trim()).toBe("");
+  });
+
+  test("a failed judge records backoff without committing the failure", () => {
+    const { ctx, root, ledger, review, source } = nightlyFixture(() => []);
+    const commits = ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim();
+    try {
+      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: judge call failed");
+    } finally {
+      source.close();
+    }
+    expect(readState(ledger).last_nightly_attempt).toBeGreaterThan(0);
+    expect(readState(ledger).nightly_failures).toBe(1);
+    expect(readJsonl<{ status: string }>(ledger.path("runs.jsonl")).at(-1)?.status).toBe("failed");
+    expect(ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim()).toBe(commits);
   });
 
   test("a locked review ledger parks the events, and the next run that gets the lock delivers them", () => {
