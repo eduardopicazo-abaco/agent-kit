@@ -69,6 +69,9 @@ function backoffElapsed(state: MemoryState, job: "reflect" | "nightly", now: num
  * | reflect | idle and new discovery tokens reach the threshold, or any new observation 6h after the last reflect |
  * | nightly | past the nightly hour, not yet run today, one unconsolidated episode; or a backlog of 25 while idle |
  * | weekly | idle and a week since the last |
+ *
+ * A failed or rejected reflect, and a failed nightly, hold that job back for
+ * 1h, doubling per consecutive failure up to 24h. A forced job ignores it.
  */
 export function decide(input: DecideInput, thresholds: Thresholds): Job[] {
   if (input.force) return input.force === "all" ? [...JOBS] : [input.force];

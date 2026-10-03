@@ -39,6 +39,8 @@ export interface LearnConfig {
  * run commands turns that text into actions. The judgement needs only the prompt.
  * `--tools ""` covers only the built-in tools; `--strict-mcp-config` with no
  * `--mcp-config` keeps the user's and plugins' MCP servers out as well.
+ * `--no-session-persistence` keeps each call from leaving a transcript in the
+ * operator's project store.
  * `--bare` is deliberately absent: it also drops the login the call needs.
  */
 export const DEFAULT_JUDGE = [
