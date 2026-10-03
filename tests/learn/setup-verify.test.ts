@@ -13,7 +13,10 @@ import { schedule } from "../../src/learn/setup/schedule.ts";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
 import { gitRepo, MemFixture, scratch, type TestContext, testContext } from "./helpers.ts";
 
-function fakeDeps(bins: string[], stdout = ""): SetupDeps & { calls: string[][] } {
+function fakeDeps(
+  bins: string[],
+  stdout = "",
+): SetupDeps & { calls: string[][]; envs: Array<NodeJS.ProcessEnv | undefined> } {
   const home = scratch("ak-home-");
   const packageRoot = scratch("ak-pkg-");
   const mode = join(packageRoot, "adapters", "observation-source", "claude-mem");
@@ -21,18 +24,21 @@ function fakeDeps(bins: string[], stdout = ""): SetupDeps & { calls: string[][] 
   writeFileSync(join(mode, `${MEM_MODE}.json`), "{}\n");
   const have = new Set(bins);
   const calls: string[][] = [];
+  const envs: Array<NodeJS.ProcessEnv | undefined> = [];
   return {
     home,
     platform: "darwin",
     uid: 501,
-    run: (cmd): RunResult => {
+    run: (cmd, options): RunResult => {
       calls.push([...cmd]);
+      envs.push(options?.env);
       return { code: 0, stdout, stderr: "", timedOut: false };
     },
     which: (bin) => (have.has(bin) ? `/usr/bin/${bin}` : null),
     ak: ["/opt/bun", "/pkg/src/cli.ts"],
     packageRoot,
     calls,
+    envs,
   };
 }
 
@@ -81,7 +87,19 @@ describe("setup doctor", () => {
     expect(doctor(ctx, deps)).toBe(0);
     expect(ctx.out).toContain("  scheduled judge auth      OK       soft  logged in");
     expect(ctx.prompts).toEqual([]);
-    expect(deps.calls).toContainEqual(["/usr/bin/claude", "auth", "status"]);
+    const probe = deps.calls.findIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
+    expect(probe).toBeGreaterThanOrEqual(0);
+    expect(deps.envs[probe]).toBeDefined();
+    expect(deps.envs[probe]).not.toHaveProperty("CLAUDE_CONFIG_DIR");
+  });
+
+  test("the scheduled auth check keeps a non-default config dir", () => {
+    const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
+    const configDir = join(deps.home, "elsewhere");
+    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: configDir, HOME: deps.home } });
+    expect(doctor(ctx, deps)).toBe(0);
+    const probe = deps.calls.findIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
+    expect(deps.envs[probe]?.CLAUDE_CONFIG_DIR).toBe(configDir);
   });
 
   test("a live judge probe runs only behind the explicit flag", () => {
