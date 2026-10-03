@@ -272,7 +272,8 @@ describe("reflect", () => {
       });
     }
     mem.close();
-    const source = ClaudeMemSource.open(dbPath)!;
+    const source = ClaudeMemSource.open(dbPath);
+    if (!source) throw new Error("claude-mem source did not open");
     const observations = fetchNew(source, "app", 0);
     const summaries = source.summaries([...new Set(observations.map((row) => row.memory_session_id))]);
     const empty = reflectPrompt(testContext(), "", [], []);

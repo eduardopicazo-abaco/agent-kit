@@ -67,19 +67,20 @@ export function fetchNew(
   return out.sort((a, b) => a.id - b.id);
 }
 
+const field = (value: string | null) => (value ?? "").slice(0, 600);
+
 /** Session id plus request, completed and next steps, each cut at 600 characters. The newest rows under the cap, returned oldest first. */
 export function formatSummaries(rows: readonly SummaryRow[], cap = SUMMARY_CHARS): string {
   const out: string[] = [];
   let used = 0;
   for (const row of rows.toReversed()) {
-    const field = (value: string | null) => (value ?? "").slice(0, 600);
     const text = `${sid8(row.memory_session_id)}\n  request: ${field(row.request)}\n  completed: ${field(row.completed)}\n  next: ${field(row.next_steps)}`;
     const added = text.length + (out.length === 0 ? 0 : 1);
     if (used + added > cap) break;
     out.push(text);
     used += added;
   }
-  return out.length > 0 ? out.reverse().join("\n") : "(none)";
+  return out.length > 0 ? out.toReversed().join("\n") : "(none)";
 }
 
 export function outputContract(cap: number, today: string): string {
