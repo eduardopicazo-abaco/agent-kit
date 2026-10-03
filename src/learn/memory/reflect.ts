@@ -31,8 +31,9 @@ import {
 } from "./ledger.ts";
 import { parseSecurityNotes, redact, SECURITY_KINDS, securityRecord, withSecurityRecord } from "./redact.ts";
 
+/** Observations and session summaries together stay inside this cap. */
 export const INPUT_CHARS = 60_000;
-/** Session summaries are a second input channel; keep their newest entries inside this independent cap. */
+/** The share of `INPUT_CHARS` held back from observations for session summaries. */
 export const SUMMARY_CHARS = 20_000;
 
 /** Observation id, time, type, session, title, subtitle, and facts cut at 600 characters. */
@@ -47,12 +48,12 @@ export function formatObservation(row: ObservationRow): string {
   return `${bits.join("\n")}\n`;
 }
 
-/** Observations after the watermark, under the input cap. A zero watermark fills from the newest. Returned oldest first. */
+/** Observations after the watermark, under the input cap less the summaries' share. A zero watermark fills from the newest. Returned oldest first. */
 export function fetchNew(
   source: ClaudeMemSource,
   memProject: string,
   watermark: number,
-  inputChars = INPUT_CHARS,
+  inputChars = INPUT_CHARS - SUMMARY_CHARS,
 ): ObservationRow[] {
   const rows = source.observationsSince(memProject, watermark, { newestFirst: watermark === 0 });
   const out: ObservationRow[] = [];
@@ -101,13 +102,15 @@ export function reflectPrompt(
   summaries: readonly SummaryRow[],
   today = todayLocal(),
 ): string {
+  const observed = observations.map(formatObservation).join("");
+  const summaryChars = Math.min(SUMMARY_CHARS, Math.max(0, INPUT_CHARS - observed.length));
   return buildPrompt(
     "reflector",
     outputContract(ctx.config.memoryTokens, today),
     [
       { title: "Previous memory", body: previous.trim() || "(empty)" },
-      { title: "New session summaries (oldest first)", body: formatSummaries(summaries) },
-      { title: "New observations (oldest first)", body: observations.map(formatObservation).join("") || "(none)" },
+      { title: "New session summaries (oldest first)", body: formatSummaries(summaries, summaryChars) },
+      { title: "New observations (oldest first)", body: observed || "(none)" },
     ],
     ctx.env,
   );

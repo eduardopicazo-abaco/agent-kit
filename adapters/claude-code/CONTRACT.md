@@ -252,7 +252,7 @@ judge model pins the complete command through `AK_LEARN_JUDGE` in their own envi
 setup carries that setting into the unit. The default command disables session persistence and runs
 from the learning runtime directory so it neither leaves project transcripts nor discovers project
 instructions from its working directory. `ak learn setup doctor` checks scheduled auth without a
-judge call; only its explicit `--live-judge` flag sends a no-op prompt. The host CLI documents
+judge call. The host CLI documents
 `--disable-slash-commands` as disabling skills and `--setting-sources` as selecting settings inputs,
 but documents no login guarantee for either. The runtime therefore adopts neither: login
 preservation is required before a context-reduction flag can enter the scheduled path.

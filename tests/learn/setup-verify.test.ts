@@ -83,7 +83,7 @@ describe("setup doctor", () => {
 
   test("checks the scheduled default judge's auth without making a judge call", () => {
     const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
-    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: join(deps.home, ".claude"), HOME: deps.home } });
+    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: "", HOME: deps.home } });
     expect(doctor(ctx, deps)).toBe(0);
     expect(ctx.out).toContain("  scheduled judge auth      OK       soft  logged in");
     expect(ctx.prompts).toEqual([]);
@@ -93,25 +93,14 @@ describe("setup doctor", () => {
     expect(deps.envs[probe]).not.toHaveProperty("CLAUDE_CONFIG_DIR");
   });
 
-  test("the scheduled auth check keeps a non-default config dir", () => {
+  test("the scheduled auth check keeps the config dir the operator's environment sets", () => {
     const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
-    const configDir = join(deps.home, "elsewhere");
-    const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: configDir, HOME: deps.home } });
-    expect(doctor(ctx, deps)).toBe(0);
-    const probe = deps.calls.findIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
-    expect(deps.envs[probe]?.CLAUDE_CONFIG_DIR).toBe(configDir);
-  });
-
-  test("a live judge probe runs only behind the explicit flag", () => {
-    const deps = fakeDeps(["bun", "git", "judge"]);
-    const ctx = testContext({
-      env: { AK_LEARN_JUDGE: "judge", CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "" },
-      replies: [{ ok: true }],
-    });
-    expect(doctor(ctx, deps)).toBe(0);
-    expect(ctx.prompts).toEqual([]);
-    expect(doctor(ctx, deps, { liveJudge: true })).toBe(0);
-    expect(ctx.prompts).toHaveLength(1);
+    for (const configDir of [join(deps.home, ".claude"), join(deps.home, "elsewhere")]) {
+      const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: configDir, HOME: deps.home } });
+      expect(doctor(ctx, deps)).toBe(0);
+      const probe = deps.calls.findLastIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
+      expect(deps.envs[probe]?.CLAUDE_CONFIG_DIR).toBe(configDir);
+    }
   });
 });
 

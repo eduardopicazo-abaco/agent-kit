@@ -37,7 +37,7 @@ function scheduledJudgeAuth(ctx: LearnContext, deps: SetupDeps): Check | null {
     return { name: "scheduled judge auth", ok: false, hard: false, why: "judge command is unavailable" };
   }
   const env = { ...ctx.env };
-  const scheduled = new Map(unitEnvironment(ctx, deps));
+  const scheduled = new Map(unitEnvironment(ctx));
   const configDir = scheduled.get("CLAUDE_CONFIG_DIR");
   if (configDir === undefined) delete env.CLAUDE_CONFIG_DIR;
   else env.CLAUDE_CONFIG_DIR = configDir;
@@ -86,7 +86,7 @@ export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
   ];
 }
 
-export function doctor(ctx: LearnContext, deps: SetupDeps, options: { liveJudge?: boolean } = {}): number {
+export function doctor(ctx: LearnContext, deps: SetupDeps): number {
   const checks = doctorChecks(ctx, deps);
   const width = Math.max(...checks.map((check) => check.name.length));
   for (const check of checks) {
@@ -106,11 +106,6 @@ export function doctor(ctx: LearnContext, deps: SetupDeps, options: { liveJudge?
   ctx.io.out(`  claude-mem dir      ${memDir(ctx, deps)}   (db ${ctx.config.memDb})`);
   ctx.io.out(`  codex home          ${codexHome(ctx, deps)}${existsSync(codexHome(ctx, deps)) ? "" : "   (absent)"}`);
   ctx.io.out(`  scheduler           ${schedulerKind(deps)}`);
-  if (options.liveJudge === true) {
-    const reply = ctx.judge('Reply with exactly {"ok":true}.');
-    ctx.io.out(`  live judge probe    ${reply === null ? "FAILED" : "OK"}`);
-    if (reply === null) return 1;
-  }
   const blocked = checks.filter((check) => check.hard && !check.ok).map((check) => check.name);
   if (blocked.length > 0) {
     ctx.io.out(`\nBLOCKED: ${blocked.join(", ")}`);

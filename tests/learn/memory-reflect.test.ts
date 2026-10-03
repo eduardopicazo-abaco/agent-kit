@@ -17,6 +17,8 @@ import {
 } from "../../src/learn/memory/ledger.ts";
 import {
   applyReflection,
+  fetchNew,
+  formatObservation,
   formatSummaries,
   INPUT_CHARS,
   reflect,
@@ -241,6 +243,48 @@ describe("reflect", () => {
     expect(formatted.length).toBeLessThanOrEqual(SUMMARY_CHARS);
     expect(formatted.indexOf("older request")).toBeGreaterThanOrEqual(0);
     expect(formatted.indexOf("newest request")).toBeGreaterThan(formatted.indexOf("older request"));
+  });
+
+  test("a backlog of observations and summaries together stays inside the input cap", () => {
+    const dir = scratch();
+    const dbPath = join(dir, "mem.db");
+    const mem = new MemFixture(dbPath);
+    const now = Date.now();
+    for (let index = 0; index < 60; index += 1) {
+      const sid = `${index.toString(16).padStart(8, "0")}-0000`;
+      mem.session({ sid, project: "app", started: now - 3_600_000 });
+      for (let n = 0; n < 4; n += 1) {
+        mem.observation({
+          sid,
+          project: "app",
+          type: "discovery",
+          title: `fact ${index}.${n}`,
+          facts: ["f".repeat(600)],
+          at: now,
+        });
+      }
+      mem.summary({
+        sid,
+        project: "app",
+        request: `#${index}#` + "r".repeat(600),
+        completed: "c".repeat(600),
+        next: "n".repeat(600),
+      });
+    }
+    mem.close();
+    const source = ClaudeMemSource.open(dbPath)!;
+    const observations = fetchNew(source, "app", 0);
+    const summaries = source.summaries([...new Set(observations.map((row) => row.memory_session_id))]);
+    const empty = reflectPrompt(testContext(), "", [], []);
+    const prompt = reflectPrompt(testContext(), "", observations, summaries);
+    source.close();
+    expect(observations.length).toBeGreaterThan(1);
+    const uncapped = observations.map(formatObservation).join("").length + formatSummaries(summaries, Infinity).length;
+    expect(uncapped).toBeGreaterThan(INPUT_CHARS);
+    expect(prompt.length - empty.length).toBeLessThanOrEqual(INPUT_CHARS);
+    const kept = [...prompt.matchAll(/#(\d+)#/g)].map((match) => Number(match[1]));
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept).toEqual(kept.toSorted((a, b) => a - b));
   });
 
   test("a cold ledger starts from the newest observations and cites only what it was shown", () => {

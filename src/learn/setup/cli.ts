@@ -16,8 +16,8 @@ export function createSetupArea(depsFor: (ctx: LearnContext) => SetupDeps = defa
     summary: "install and check the host wiring: hooks, scheduler, claude-mem mode, first seed",
     verbs: {
       doctor: {
-        usage: "setup doctor [--live-judge]                   report prerequisites; live probe only when asked",
-        run: (args, ctx) => doctor(ctx, depsFor(ctx), { liveJudge: args.flags.has("live-judge") }),
+        usage: "setup doctor                                  report prerequisites; changes nothing",
+        run: (_args, ctx) => doctor(ctx, depsFor(ctx)),
       },
       wire: {
         usage:

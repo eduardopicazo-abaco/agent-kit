@@ -147,20 +147,21 @@ StandardError=append:/cfg/agent-kit/learn/scheduler.log
 });
 
 describe("paths", () => {
-  test("the scheduler omits an explicit config dir when it is the host default", () => {
-    const home = scratch("ak-home-");
-    const ctx = context({ CLAUDE_CONFIG_DIR: join(home, ".claude"), PATH: "/bin" });
-    expect(unitEnvironment(ctx, deps({ home }))).toEqual([["PATH", "/bin"]]);
-    expect(launchdPlist(ctx, deps({ home }), 900)).not.toContain("CLAUDE_CONFIG_DIR");
+  test("the scheduler omits the config dir when the operator's environment leaves it unset", () => {
+    const ctx = context({ PATH: "/bin" });
+    expect(unitEnvironment(ctx)).toEqual([["PATH", "/bin"]]);
+    expect(launchdPlist(ctx, deps(), 900)).not.toContain("CLAUDE_CONFIG_DIR");
+    expect(unitEnvironment(context({ CLAUDE_CONFIG_DIR: " ", PATH: "/bin" }))).toEqual([["PATH", "/bin"]]);
   });
 
-  test("the scheduler keeps a non-default config dir", () => {
+  test("the scheduler carries the config dir the operator's environment sets, the host default included", () => {
     const home = scratch("ak-home-");
-    const config = scratch("ak-cfg-");
-    expect(unitEnvironment(context({ CLAUDE_CONFIG_DIR: config, PATH: "/bin" }), deps({ home }))).toContainEqual([
-      "CLAUDE_CONFIG_DIR",
-      config,
-    ]);
+    for (const config of [join(home, ".claude"), scratch("ak-cfg-")]) {
+      expect(unitEnvironment(context({ CLAUDE_CONFIG_DIR: config, PATH: "/bin" }))).toEqual([
+        ["CLAUDE_CONFIG_DIR", config],
+        ["PATH", "/bin"],
+      ]);
+    }
   });
 
   test("the config dir follows the environment", () => {
