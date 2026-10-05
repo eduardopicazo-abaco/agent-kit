@@ -74,7 +74,7 @@ references:
 
 schemas:
   baseline: 14
-  catalog: 30
+  catalog: 31
   expansions:
     - ids: [case]
       reason: >-
@@ -116,6 +116,12 @@ schemas:
         Run-record schemas the skill bodies already require, added in the follow-ups plan decision
         "Add real schemas".
       commits: [09dd58d]
+    - ids: [constitution-article]
+      reason: >-
+        Constitution support keeps each article of a project's constitution in a registry held in
+        an overlay; agent-kit owns the article's shape and checks it, and the overlay owns the text.
+      commits: [015c2f5]
+      docs: [docs/decisions/0009-constitution-support.md]
 
 profiles:
   baseline: 4
