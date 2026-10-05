@@ -1,0 +1,43 @@
+schema: constitution-article
+schema_version: 1
+id: SAFE-003
+version: 1
+theme: safety
+tier: hard-constraint
+source:
+  document: source/constitution.md
+  section: 1. Safety
+  quote: A migration that drops or rewrites stored data ships with a rollback plan that a second person has read.
+principle: A destructive migration carries a rollback plan someone else has reviewed.
+why: Stored data that a migration destroys cannot be rebuilt from the code that destroyed it.
+do:
+  - id: rollback-plan
+    text: Ship a rollback plan with every migration that drops or rewrites stored data.
+  - id: second-reader
+    text: Have a second person read the rollback plan before the migration merges.
+exceptions:
+  - id: scratch-schema
+    applies_when: The migration touches only a scratch schema that holds no customer data.
+    permits: Merging the migration without a rollback plan.
+    requires:
+      - The schema is listed as scratch in the database manifest.
+    source:
+      document: source/constitution.md
+      section: 1. Safety
+      quote: Scratch schemas that hold no customer data are exempt.
+triggers:
+  paths:
+    - "migrations/**"
+  artifact_kinds:
+    - migration
+enforced_by:
+  - channel: boundary
+    mechanism: CODEOWNERS on migrations/ with required code-owner review
+    covers: second-reader
+    predicate: A change under migrations/ cannot merge without approval from a member of the data owners team.
+  - channel: check
+    mechanism: the migration-rollback CI check
+    covers: rollback-plan
+    predicate: Every new migration file that contains DROP or UPDATE has a sibling rollback file.
+review_questions:
+  - Does the rollback plan restore the data, or only the schema?

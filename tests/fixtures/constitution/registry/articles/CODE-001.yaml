@@ -1,0 +1,16 @@
+schema: constitution-article
+schema_version: 1
+id: CODE-001
+version: 1
+theme: code
+tier: judgment
+source:
+  document: source/constitution.md
+  section: 6. Code
+  quote: Name things for what they are.
+principle: Names describe what a thing is.
+why: A name that describes how a value was made goes stale the first time the method changes.
+triggers:
+  cross_cutting: true
+review_questions:
+  - Does each new name still fit if the implementation behind it changes?

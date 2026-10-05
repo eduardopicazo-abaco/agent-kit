@@ -1,0 +1,14 @@
+schema: constitution-article
+schema_version: 1
+id: SAFE-009
+version: 1
+theme: safety
+tier: hard-constraint
+principle: Deployments to production happen only from the release pipeline.
+why: A deployment from a laptop carries whatever that laptop has, reviewed or not.
+dont:
+  - id: no-manual-deploy
+    text: Deploy to production from anywhere but the release pipeline.
+triggers:
+  paths:
+    - "deploy/**"

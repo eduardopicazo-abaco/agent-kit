@@ -351,6 +351,39 @@
         ]
       }
     },
+    "constitution": {
+      "description": "ADR-0009. Where the project's constitution registry lives. The registry is an overlay this package reads only through the path or package named here: its root holds one article per file under 'articles/', each valid against constitution-article.schema.json. Absent, nothing about constitutions runs for this project.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry"],
+      "properties": {
+        "registry": {
+          "oneOf": [
+            {
+              "description": "An overlay path: the registry root as a path inside one of the project's repositories, by default the knowledgebase repository this record lives in.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path"],
+              "properties": {
+                "path": { "$ref": "common.schema.json#/$defs/repo_path" },
+                "repo": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+              }
+            },
+            {
+              "description": "A package pinned to an exact version, so an amendment reaches the project as a deliberate upgrade. 'path' is the registry root inside the package, by default its root.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["package", "version"],
+              "properties": {
+                "package": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+                "version": { "$ref": "common.schema.json#/$defs/semver" },
+                "path": { "$ref": "common.schema.json#/$defs/repo_path" }
+              }
+            }
+          ]
+        }
+      }
+    },
     "documentation_policy": {
       "description": "Plan 8. Required-documentation and indexing status joins ship evidence, but a mechanical fix with no decision records the applicable existing decision or an explicit no-new-decision result instead of a manufactured ADR.",
       "type": "object",

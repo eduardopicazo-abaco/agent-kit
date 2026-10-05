@@ -1,0 +1,35 @@
+schema: constitution-article
+schema_version: 1
+id: SAFE-001
+version: 1
+theme: safety
+tier: hard-constraint
+source:
+  document: source/constitution.md
+  section: 1. Safety
+  quote: Nobody pushes to the default branch; every change reaches it through a reviewed pull request.
+principle: Changes reach the default branch only through a reviewed pull request.
+why: A direct push skips the review and the checks that the pull request runs.
+dont:
+  - id: no-direct-push
+    text: Push to the default branch.
+do:
+  - id: reviewed-pull-request
+    text: Land every change through a pull request that a second person approved.
+triggers:
+  cross_cutting: true
+enforced_by:
+  - channel: boundary
+    mechanism: the default-branch ruleset on the hosting forge
+    covers: no-direct-push
+    predicate: The forge rejects a push to the default branch from any account without bypass rights.
+  - channel: boundary
+    mechanism: the default-branch ruleset on the hosting forge
+    covers: reviewed-pull-request
+    predicate: A pull request into the default branch cannot merge without one approving review from someone other than its author.
+  - channel: guard
+    mechanism: guard rule git.push-default-branch
+    covers: no-direct-push
+    predicate: A git push whose destination is the default branch is denied before it runs.
+review_questions:
+  - Does the change ask anyone to push to the default branch, in a script, a runbook or a CI step?

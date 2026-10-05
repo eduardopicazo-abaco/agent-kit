@@ -859,7 +859,7 @@ references:
       evidence, blocking only through named mandatory constraints.
 
 # ---------------------------------------------------------------------------
-# Schemas — 30. `common` holds shared $defs and validates no document itself.
+# Schemas — 31. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -1021,6 +1021,13 @@ schemas:
     summary: >-
       The memory ledger's watermarks and schedule marks, so a job resumes from the last evidence it
       consumed instead of replaying or skipping any.
+  - id: constitution-article
+    batch: 13
+    status: authored
+    summary: >-
+      One registered constitution article: source span, tier, exceptions, related articles, triggers
+      and the checks that cover it, each naming the exact predicate it verifies. Registries live in an
+      overlay; this package holds only the shape and invented fixtures.
 
 # ---------------------------------------------------------------------------
 # Policies — 5. Machine-referenceable rulings.

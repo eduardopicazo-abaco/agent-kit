@@ -1,0 +1,25 @@
+schema: constitution-article
+schema_version: 1
+id: OPS-001
+version: 1
+theme: operations
+tier: default
+source:
+  document: source/constitution.md
+  section: 7. Operations
+  quote: Every scheduled job writes a line when it starts and a line when it ends.
+principle: Scheduled jobs log their start and their end.
+why: A job that started and never ended is invisible without both lines.
+do:
+  - id: start-line
+    text: Write a start line with the job name and run id.
+  - id: end-line
+    text: Write an end line with the run id and the outcome.
+triggers:
+  paths:
+    - "jobs/**"
+enforced_by:
+  - channel: check
+    mechanism: the job-harness unit test
+    covers: start-line
+    predicate: Every job registered with the scheduler emits a start line before its body runs.

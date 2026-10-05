@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
@@ -20,7 +20,16 @@ interface InvalidCase {
   file: string;
   message: RegExp;
   rules?: string[];
+  /**
+   * Schemas copied from this repository into the tree when it is
+   * materialized, so the case measures the contract itself. A committed copy
+   * would go on passing after the real schema moved, which is why
+   * 15-malformed-install needs a test comparing its copy with the original.
+   */
+  schemas?: string[];
 }
+
+const ARTICLE_SCHEMAS = ["common", "constitution-article"];
 
 const CASES: ReadonlyArray<InvalidCase> = [
   {
@@ -165,10 +174,49 @@ const CASES: ReadonlyArray<InvalidCase> = [
     file: "skills/alpha/SKILL.md",
     message: /The first step under ## Workflow .* does not name `\/ak:alpha` or say to stop/,
   },
+  {
+    tree: "21-article-without-source-span",
+    what: "a constitution article with no source span",
+    rule: "schemas.document-invalid",
+    file: "templates/constitution-article.yaml",
+    message: /constitution-article\.schema\.json: \(root\) must have required property 'source'/,
+    schemas: ARTICLE_SCHEMAS,
+  },
+  {
+    tree: "22-enforced-by-without-predicate",
+    what: "an enforced_by entry that names no predicate",
+    rule: "schemas.document-invalid",
+    file: "templates/constitution-article.yaml",
+    message: /constitution-article\.schema\.json: \/enforced_by\/0 must have required property 'predicate'/,
+    schemas: ARTICLE_SCHEMAS,
+  },
+  {
+    tree: "23-article-without-triggers",
+    what: "an article that is not cross-cutting and names no trigger",
+    rule: "schemas.document-invalid",
+    file: "templates/constitution-article.yaml",
+    message: /constitution-article\.schema\.json: \/triggers\/cross_cutting must be equal to constant/,
+    schemas: ARTICLE_SCHEMAS,
+  },
+  {
+    tree: "24-article-tier-outside-vocabulary",
+    what: "an article whose tier is outside the three tiers",
+    rule: "schemas.document-invalid",
+    file: "templates/constitution-article.yaml",
+    message: /constitution-article\.schema\.json: \/tier must be equal to one of the allowed values/,
+    schemas: ARTICLE_SCHEMAS,
+  },
 ];
 
-function errorsOf(tree: string): Issue[] {
-  return runValidation(materializeFixture(tree)).issues.filter((i) => i.severity === "error");
+const REPO = join(import.meta.dir, "..");
+
+function errorsOf(tree: string, schemas: ReadonlyArray<string> = []): Issue[] {
+  const root = materializeFixture(tree);
+  if (schemas.length > 0) mkdirSync(join(root, "schemas"), { recursive: true });
+  for (const id of schemas) {
+    cpSync(join(REPO, "schemas", `${id}.schema.json`), join(root, "schemas", `${id}.schema.json`));
+  }
+  return runValidation(root).issues.filter((i) => i.severity === "error");
 }
 
 describe("the positive fixture", () => {
@@ -213,7 +261,7 @@ describe("the positive fixture", () => {
 describe("invalid fixtures", () => {
   for (const c of CASES) {
     test(`${c.tree}: ${c.what}`, () => {
-      const errors = errorsOf(`invalid/${c.tree}`);
+      const errors = errorsOf(`invalid/${c.tree}`, c.schemas);
       const hit = errors.find((i) => i.rule === c.rule && i.file === c.file);
       expect({
         tree: c.tree,

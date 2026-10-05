@@ -1,0 +1,46 @@
+schema: constitution-article
+schema_version: 1
+id: FAIL-001
+version: 3
+theme: failure
+tier: default
+source:
+  document: source/constitution.md
+  section: 3. Failure
+  quote: "When something fails, say so: a silent fallback hides the fault from the people who could fix it."
+principle: A failure is reported, never replaced by a silent fallback.
+why: A fallback nobody sees turns a fault into wrong data that looks right.
+dont:
+  - id: no-silent-fallback
+    text: Catch an error and continue with a default value without reporting it.
+do:
+  - id: report-the-failure
+    text: Report every caught failure to the error tracker with its cause.
+exceptions:
+  - id: unread-telemetry
+    applies_when: The failing call only sends telemetry that no alert or report reads.
+    permits: Dropping the event without reporting the failure.
+    source:
+      document: source/constitution.md
+      section: 3. Failure
+      quote: Telemetry that nobody acts on may drop events quietly.
+related:
+  conflicts:
+    - AVAIL-001
+  tie_breakers:
+    - prevails_over: AVAIL-001
+      when: The code path writes to the stock ledger.
+      reason: Where staying up and saying so disagree, saying so wins for anything that writes to the stock ledger.
+triggers:
+  cross_cutting: true
+enforced_by:
+  - channel: check
+    mechanism: lint rule no-empty-catch
+    covers: no-silent-fallback
+    predicate: No catch block in the diff is empty.
+  - channel: review
+    mechanism: the constitution review seat
+    covers: report-the-failure
+    predicate: Each catch block the change adds either reports the error or names the exception that applies.
+review_questions:
+  - Where the change catches an error, who finds out that it happened?

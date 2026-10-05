@@ -1,0 +1,25 @@
+schema: constitution-article
+schema_version: 1
+id: FAIL-002
+version: 1
+theme: failure
+tier: default
+source:
+  document: source/constitution.md
+  section: 3. Failure
+  quote: Retry at most three times, waiting longer each time.
+principle: Retries are bounded at three, with increasing waits.
+why: Unbounded or immediate retries turn one slow dependency into an outage for everyone calling it.
+do:
+  - id: bounded-retries
+    text: Stop after the third retry.
+  - id: backoff
+    text: Wait longer before each retry than before the last.
+triggers:
+  symbols:
+    - withRetry
+enforced_by:
+  - channel: check
+    mechanism: the retry-policy unit test
+    covers: bounded-retries
+    predicate: withRetry calls its operation at most four times in total.

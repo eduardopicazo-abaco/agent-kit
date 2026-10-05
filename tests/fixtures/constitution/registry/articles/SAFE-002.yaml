@@ -1,0 +1,45 @@
+schema: constitution-article
+schema_version: 1
+id: SAFE-002
+version: 2
+theme: safety
+tier: hard-constraint
+source:
+  document: source/constitution.md
+  section: 1. Safety
+  quote: Secrets never enter a repository, not even in a branch that will be deleted.
+principle: No secret is ever committed, on any branch.
+why: A pushed secret is copied to every clone and fork, so deleting the branch does not withdraw it.
+dont:
+  - id: no-committed-secret
+    text: Commit a credential, key or token, even temporarily.
+do:
+  - id: secrets-from-the-store
+    text: Read secrets at run time from the secret store.
+triggers:
+  paths:
+    - "**/.env*"
+    - "config/**"
+  artifact_kinds:
+    - configuration
+enforced_by:
+  - channel: boundary
+    mechanism: push protection secret scanning on the hosting forge
+    covers: no-committed-secret
+    predicate: A push containing a string matching a known credential format is rejected.
+  - channel: check
+    mechanism: the secrets-scan CI check
+    covers: no-committed-secret
+    predicate: No file in the diff matches the scanner's credential patterns.
+  - channel: guard
+    mechanism: guard rule read.secret-path
+    covers: no-committed-secret
+    predicate: A read of a path matching .env or a key file is denied.
+review_questions:
+  - Does any configuration value in the diff look like a credential rather than a reference to one?
+examples:
+  good:
+    - summary: The service reads its token from the secret store when it starts.
+      snippet: "token = secrets.get('ledger-api')"
+  bad:
+    - summary: A test file carries a live token so the suite can reach the staging ledger.

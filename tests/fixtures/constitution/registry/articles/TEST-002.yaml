@@ -1,0 +1,22 @@
+schema: constitution-article
+schema_version: 1
+id: TEST-002
+version: 1
+theme: testing
+tier: judgment
+source:
+  document: source/constitution.md
+  section: 5. Tests
+  quote: Test what the code does, not how it does it.
+principle: Tests assert observable behavior rather than internal steps.
+why: A test bound to the implementation breaks on every refactor and passes on behavior that is wrong.
+triggers:
+  paths:
+    - "tests/**"
+review_questions:
+  - Would this test still pass if the code were rewritten to produce the same results another way?
+examples:
+  good:
+    - summary: The test records a movement and reads the resulting balance.
+  bad:
+    - summary: The test asserts that recordMovement called a private helper twice.

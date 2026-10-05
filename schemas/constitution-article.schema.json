@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/constitution-article.schema.json",
+  "title": "Constitution article",
+  "description": "ADR-0009. One registered article of a project's constitution, one article per file under the registry's 'articles/' directory, the file named by the article's id. The registry is the source: an article keeps its source span, exceptions and related articles, and only the obligations its 'enforced_by' entries name are covered, each entry naming the exact predicate it verifies, so a check that verifies part of an article never reads as verifying the article. Registries live in an overlay that a project record names (project 'constitution.registry'); this package holds only this shape and invented fixtures. An article is configuration, not a durable run artifact, so it carries a 'schema' marker and a version but not common's envelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "id", "version", "theme", "tier", "source", "principle", "why", "triggers"],
+  "properties": {
+    "schema": { "const": "constitution-article" },
+    "schema_version": {
+      "description": "The version of this shape the article was written against. The overlay pins an agent-kit version, so a change here reaches it as a deliberate upgrade (ADR-0009 decision 1).",
+      "const": 1
+    },
+    "id": { "$ref": "#/$defs/article_id" },
+    "version": {
+      "description": "The article's own version. Raised whenever its normative text changes; every compiled rule, block reason and review finding cites the id and this version together.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "theme": {
+      "description": "The article's theme, recorded here so classification is never read from an id prefix (ADR-0009 decision 2). An article that changes theme keeps its id.",
+      "$ref": "common.schema.json#/$defs/kebab_id"
+    },
+    "tier": {
+      "description": "'hard-constraint' holds only through a mechanism that does not depend on the agent or a hook running, and a coverage report fails one that no 'boundary' entry in 'enforced_by' covers (ADR-0009, design point 1). 'default' is followed unless an exception applies. 'judgment' asks for weighing rather than a rule.",
+      "enum": ["hard-constraint", "default", "judgment"]
+    },
+    "source": {
+      "description": "Where the article's text comes from. The quote is the source's own words, never a paraphrase.",
+      "$ref": "#/$defs/source_span"
+    },
+    "principle": {
+      "description": "The rule in one sentence.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
+    },
+    "why": {
+      "description": "The reason the article exists. It stays with the article when a check lands, so the check is never the only record of why.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
+    },
+    "do": {
+      "description": "Obligations to do something. Each one is an obligation coverage counts separately.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/obligation" }
+    },
+    "dont": {
+      "description": "Obligations not to do something. Each one is an obligation coverage counts separately.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/obligation" }
+    },
+    "exceptions": {
+      "description": "The cases the source itself carves out. An exception the source does not state is a proposed amendment, not an entry here.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/exception" }
+    },
+    "related": { "$ref": "#/$defs/related" },
+    "triggers": { "$ref": "#/$defs/triggers" },
+    "enforced_by": {
+      "description": "What covers which obligation. An absent or empty list means nothing covers the article, which a coverage report lists rather than hides.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/enforcement" }
+    },
+    "review_questions": {
+      "description": "Questions a reviewer asks of a change that triggers the article. Each is answerable from the change and its records.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+    },
+    "examples": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "good": { "type": "array", "items": { "$ref": "#/$defs/example" } },
+        "bad": { "type": "array", "items": { "$ref": "#/$defs/example" } }
+      }
+    },
+    "translation_fixtures": {
+      "description": "Inputs a compiled form of the article must judge the way the article does: a check, a path rule or a review question translated from it.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/translation_fixture" }
+    }
+  },
+  "$defs": {
+    "article_id": {
+      "description": "Immutable once assigned and never reused. Both shapes are admitted so the choice stays the overlay's: a themed prefix and a number ('SAFE-003'), or a plain number ('12').",
+      "type": "string",
+      "pattern": "^([A-Z][A-Z0-9]*-)?[0-9]{1,6}$"
+    },
+    "source_span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document", "section", "quote"],
+      "properties": {
+        "document": {
+          "description": "The source document, as a path relative to the registry root.",
+          "$ref": "common.schema.json#/$defs/repo_path"
+        },
+        "section": {
+          "description": "The section heading the quote sits under, as the document spells it.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "quote": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+      }
+    },
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "description": "Unique within the article; 'enforced_by' entries name it.",
+          "$ref": "common.schema.json#/$defs/kebab_id"
+        },
+        "text": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "applies_when", "permits"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/kebab_id" },
+        "applies_when": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+        "permits": {
+          "description": "What the exception allows that the article otherwise forbids or requires.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "requires": {
+          "description": "What must be on record for the exception to apply, such as an approved decision. An exception that requires nothing applies whenever its condition holds.",
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+        },
+        "source": { "$ref": "#/$defs/source_span" }
+      }
+    },
+    "related": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conflicts": {
+          "description": "Articles this one can collide with on the same change.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/article_id" }
+        },
+        "tie_breakers": {
+          "description": "How a collision resolves. Each entry says this article prevails over another, and when.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/tie_breaker" }
+        },
+        "supersedes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/article_id" }
+        }
+      }
+    },
+    "tie_breaker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prevails_over", "reason"],
+      "properties": {
+        "prevails_over": { "$ref": "#/$defs/article_id" },
+        "when": {
+          "description": "The condition under which this article prevails. Absent: whenever the two collide.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "reason": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+      }
+    },
+    "triggers": {
+      "description": "What makes a change subject to the article. A cross-cutting article applies to every change; any other names at least one trigger.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cross_cutting": { "type": "boolean" },
+        "paths": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/glob" } },
+        "symbols": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/nonempty_string" } },
+        "types": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/nonempty_string" } },
+        "artifact_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+        },
+        "packs": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/pack_id" } }
+      },
+      "anyOf": [
+        { "required": ["cross_cutting"], "properties": { "cross_cutting": { "const": true } } },
+        { "required": ["paths"] },
+        { "required": ["symbols"] },
+        { "required": ["types"] },
+        { "required": ["artifact_kinds"] },
+        { "required": ["packs"] }
+      ]
+    },
+    "enforcement": {
+      "description": "One mechanism covering one obligation. 'boundary' holds without the agent or a hook running: a sandbox, a scoped credential, branch protection, a required check on the protected branch. 'check' is a deterministic check run where the agent can also run it. 'guard' is the opt-in guard runtime, early feedback and never the boundary. 'review' is a review seat or a required human review. A passing mechanism is evidence for its predicate alone.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel", "mechanism", "covers", "predicate"],
+      "properties": {
+        "channel": { "enum": ["boundary", "check", "guard", "review"] },
+        "mechanism": {
+          "description": "The specific mechanism, named so it can be found: a check id, a ruleset, a hook rule id.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "covers": {
+          "description": "The id of the 'do' or 'dont' obligation this entry covers.",
+          "$ref": "common.schema.json#/$defs/kebab_id"
+        },
+        "predicate": {
+          "description": "The exact predicate the mechanism verifies, which may be narrower than the obligation it covers.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "summary": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+        "snippet": { "type": "string" }
+      }
+    },
+    "translation_fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "expect", "path", "content"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/kebab_id" },
+        "expect": { "enum": ["violation", "conforming"] },
+        "covers": {
+          "description": "The obligation the fixture exercises, when it exercises one.",
+          "$ref": "common.schema.json#/$defs/kebab_id"
+        },
+        "path": {
+          "description": "Where the content would live, so path triggers apply to it.",
+          "$ref": "common.schema.json#/$defs/repo_path"
+        },
+        "content": { "type": "string" }
+      }
+    }
+  }
+}

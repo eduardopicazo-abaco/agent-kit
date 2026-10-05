@@ -165,7 +165,7 @@
       "x-validator-rule": "catalog.reference-loaded-by-names-a-declared-skill"
     },
     "schemas": {
-      "description": "The 27 JSON Schemas. 'common' holds the shared $defs and validates no document itself; the thirteen artifact schemas are exactly common#/$defs/schema_id, catalog, skill, pack, case, rulings, install, firstmate-binding and tracker-binding validate configuration rather than run artifacts, and review-event, review-pattern, episode, memory-run and learn-state validate the learning runtime's ledger records, which is why none of those carry an envelope. Schema entries have no provenance origin: they are original contracts, not adapted donor files.",
+      "description": "The 31 JSON Schemas. 'common' holds the shared $defs and validates no document itself; the sixteen artifact schemas are exactly common#/$defs/schema_id, catalog, skill, pack, case, rulings, install, firstmate-binding, tracker-binding and constitution-article validate configuration rather than run artifacts, and review-event, review-pattern, episode, memory-run and learn-state validate the learning runtime's ledger records, which is why none of those carry an envelope. Schema entries have no provenance origin: they are original contracts, not adapted donor files.",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -204,7 +204,8 @@
               "review-pattern",
               "episode",
               "memory-run",
-              "learn-state"
+              "learn-state",
+              "constitution-article"
             ]
           },
           "batch": { "$ref": "#/$defs/batch" },

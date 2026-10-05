@@ -1,0 +1,47 @@
+schema: constitution-article
+schema_version: 1
+id: DATA-001
+version: 1
+theme: data
+tier: hard-constraint
+source:
+  document: source/constitution.md
+  section: 2. Data
+  quote: Seed stock is counted in whole grams and stored as integers; a floating-point number never holds a stock quantity.
+principle: Stock quantities are integers of grams and never floating-point numbers.
+why: Floating-point arithmetic drifts on repeated addition, and the ledger has to balance to the gram.
+do:
+  - id: integer-grams
+    text: Store and compute stock quantities as integer grams.
+dont:
+  - id: no-float-stock
+    text: Hold a stock quantity in a floating-point value, even for an intermediate step.
+triggers:
+  paths:
+    - "src/ledger/**"
+    - "src/stock/**"
+  types:
+    - StockQuantity
+  packs:
+    - pack-data
+enforced_by:
+  - channel: boundary
+    mechanism: the units-lint required check on the protected default branch
+    covers: no-float-stock
+    predicate: No value typed StockQuantity is produced by an expression involving a float literal or a division.
+  - channel: check
+    mechanism: the stock-ledger database constraint test
+    covers: integer-grams
+    predicate: The stock ledger's quantity column is an integer type.
+review_questions:
+  - Does any helper the change touches turn a quantity into a floating-point value on its way somewhere else?
+translation_fixtures:
+  - id: average-by-division
+    expect: violation
+    covers: no-float-stock
+    path: src/stock/average.ts
+    content: "export const average = (q: StockQuantity, n: number) => q / n;"
+  - id: float-outside-stock
+    expect: conforming
+    path: src/catalogue/rating.ts
+    content: "export const rating = (stars: number) => stars / 5;"

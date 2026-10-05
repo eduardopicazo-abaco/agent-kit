@@ -1,0 +1,23 @@
+schema: constitution-article
+schema_version: 1
+id: AVAIL-001
+version: 1
+theme: availability
+tier: default
+source:
+  document: source/constitution.md
+  section: 4. Availability
+  quote: The catalogue stays readable when a dependency it does not need for reading is down.
+principle: The catalogue keeps serving reads when a dependency reads do not need is unavailable.
+why: Growers browse the catalogue far more often than they order, and a down recommendations service should not hide it.
+do:
+  - id: degrade-reads
+    text: Serve catalogue pages without the optional panels whose dependency is down.
+related:
+  conflicts:
+    - FAIL-001
+triggers:
+  paths:
+    - "src/catalogue/**"
+review_questions:
+  - Does the change make a catalogue read depend on a service that reads do not need?

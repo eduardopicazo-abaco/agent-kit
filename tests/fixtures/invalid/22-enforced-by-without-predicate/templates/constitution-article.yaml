@@ -1,0 +1,22 @@
+schema: constitution-article
+schema_version: 1
+id: SAFE-009
+version: 1
+theme: safety
+tier: hard-constraint
+source:
+  document: source/constitution.md
+  section: 1. Safety
+  quote: Production is deployed from the release pipeline and from nowhere else.
+principle: Deployments to production happen only from the release pipeline.
+why: A deployment from a laptop carries whatever that laptop has, reviewed or not.
+dont:
+  - id: no-manual-deploy
+    text: Deploy to production from anywhere but the release pipeline.
+triggers:
+  paths:
+    - "deploy/**"
+enforced_by:
+  - channel: boundary
+    mechanism: production credentials held only by the release pipeline
+    covers: no-manual-deploy

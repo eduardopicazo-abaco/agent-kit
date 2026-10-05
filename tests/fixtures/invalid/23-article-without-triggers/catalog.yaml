@@ -1,0 +1,16 @@
+schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+skills:
+  - id: alpha
+    status: authored
+    invocation: U
+schemas:
+  - id: common
+    status: authored
+  - id: constitution-article
+    status: authored

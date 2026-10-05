@@ -1,0 +1,23 @@
+schema: constitution-article
+schema_version: 1
+id: TEST-001
+version: 1
+theme: testing
+tier: default
+source:
+  document: source/constitution.md
+  section: 5. Tests
+  quote: A bug fix arrives with a test that failed before the fix.
+principle: A bug fix carries a test that fails without it.
+why: A test written after the fix and never seen failing may not exercise the bug at all.
+do:
+  - id: failing-test-first
+    text: Add a test that fails on the commit before the fix and passes after it.
+triggers:
+  artifact_kinds:
+    - bug-fix
+enforced_by:
+  - channel: review
+    mechanism: the code review spec lane
+    covers: failing-test-first
+    predicate: The pull request names a test and shows it failing on the parent commit.

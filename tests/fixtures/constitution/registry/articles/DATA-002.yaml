@@ -1,0 +1,30 @@
+schema: constitution-article
+schema_version: 1
+id: DATA-002
+version: 1
+theme: data
+tier: default
+source:
+  document: source/constitution.md
+  section: 2. Data
+  quote: Every write to the stock ledger carries an idempotency key, so a retried request records once.
+principle: Every stock ledger write is idempotent by key.
+why: A retried request that records twice moves stock that never moved.
+do:
+  - id: idempotency-key
+    text: Give every ledger write an idempotency key derived from the request.
+dont:
+  - id: no-check-then-insert
+    text: Guard a ledger insert with a separate read that checks for a duplicate.
+triggers:
+  paths:
+    - "src/ledger/**"
+  symbols:
+    - recordMovement
+enforced_by:
+  - channel: check
+    mechanism: the ledger-write contract test
+    covers: idempotency-key
+    predicate: Calling recordMovement twice with the same key leaves one row.
+review_questions:
+  - Can two concurrent requests with the same key both pass the duplicate check?
