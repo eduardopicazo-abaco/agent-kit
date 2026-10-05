@@ -16,6 +16,7 @@ import { checkBudget } from "./budget.ts";
 import { checkCompleteness } from "./completeness.ts";
 import { checkCatalogRules, checkPackManifests, checkProfileCapabilities, checkSkillManifests } from "./configrules.ts";
 import type { CheckContext } from "./context.ts";
+import { checkConstitution } from "./constitution.ts";
 import { checkContent } from "./content.ts";
 import { checkContractDefects } from "./defects.ts";
 import { checkDocumentRules } from "./docrules.ts";
@@ -49,6 +50,8 @@ export interface RunOptions {
   readonly extraChecks?: readonly Check[];
   /** Passed to the packaging-dependent checks. */
   readonly build?: BuildOptions;
+  /** A project record; the constitution check reads the registry it names. */
+  readonly project?: string;
 }
 
 export interface ValidationRun {
@@ -94,6 +97,8 @@ export const CHECKS: readonly Check[] = [
   { name: "grader-surfaces", run: checkGraderSurfaces },
   { name: "fired-indicators", run: checkFiredIndicators },
   { name: "case-names", run: checkCaseNames },
+  // Inert unless a project record names a registry (ADR-0009 decision 4).
+  { name: "constitution", run: checkConstitution },
 ];
 
 export function runValidation(root: string, options: RunOptions = {}): ValidationRun {
@@ -103,7 +108,7 @@ export function runValidation(root: string, options: RunOptions = {}): Validatio
     return { catalog: null, issues: sortIssues(issues), ok: false };
   }
 
-  const ctx: CheckContext = { root, catalog: loaded.catalog };
+  const ctx: CheckContext = { root, catalog: loaded.catalog, project: options.project };
   const build = options.build ?? DEFAULT_BUILD;
   const checks = [...CHECKS, ...(options.extraChecks ?? [])].map((check) =>
     check.name === "links-bundle" ? { name: check.name, run: (c: CheckContext) => checkBundleLinks(c, build) } : check,

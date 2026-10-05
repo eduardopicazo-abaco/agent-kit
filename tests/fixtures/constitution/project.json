@@ -1,0 +1,90 @@
+{
+  "schema": "project",
+  "schema_version": 1,
+  "id": "seed-exchange-project-record",
+  "project": {
+    "id": "seed-exchange",
+    "repo": "example/seed-exchange"
+  },
+  "run_id": null,
+  "created_by": {
+    "role": "human"
+  },
+  "inputs": [],
+  "source_revision": null,
+  "created_at": "2026-09-30T12:00:00Z",
+  "status": "active",
+  "identity": {
+    "id": "seed-exchange",
+    "name": "Seed exchange (invented)",
+    "repos": [
+      {
+        "repo": "example/seed-exchange",
+        "role": "application",
+        "default_branch": "main"
+      },
+      {
+        "repo": "example/seed-kb",
+        "role": "knowledgebase",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "kb": {
+    "ownership": "central",
+    "root": "example/seed-kb",
+    "project_path": "projects/seed-exchange"
+  },
+  "standards": [],
+  "limits": {
+    "fix_cycles": 2,
+    "consensus_rounds": 3,
+    "scout_turns": 4
+  },
+  "guidance": {
+    "pr_size": {
+      "target_changed_lines": 100,
+      "enforcement": "advisory"
+    },
+    "test_pyramid": {
+      "unit_percent": 80,
+      "integration_percent": 15,
+      "end_to_end_percent": 5,
+      "enforcement": "advisory"
+    },
+    "delegation": {
+      "weights": {
+        "reversibility": 1,
+        "size": 1,
+        "complexity": 1,
+        "spec": 1,
+        "verification": 1
+      },
+      "cut_points": {
+        "yellow_agent": 4,
+        "yellow_owner": 7,
+        "red": 10
+      },
+      "enforcement": "advisory"
+    },
+    "exceptions": []
+  },
+  "protected_tests": [
+    "tests/acceptance/**",
+    "tests/e2e/critical/**"
+  ],
+  "tracker_policy": {
+    "system_of_record": {
+      "system": "knowledgebase"
+    }
+  },
+  "packs": [
+    "pack-data",
+    "pack-secure"
+  ],
+  "constitution": {
+    "registry": {
+      "path": "tests/fixtures/constitution/registry"
+    }
+  }
+}

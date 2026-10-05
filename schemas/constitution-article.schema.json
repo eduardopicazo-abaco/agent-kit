@@ -5,6 +5,7 @@
   "description": "ADR-0009. One registered article of a project's constitution, one article per file under the registry's 'articles/' directory, the file named by the article's id. The registry is the source: an article keeps its source span, exceptions and related articles, and only the obligations its 'enforced_by' entries name are covered, each entry naming the exact predicate it verifies, so a check that verifies part of an article never reads as verifying the article. Registries live in an overlay that a project record names (project 'constitution.registry'); this package holds only this shape and invented fixtures. An article is configuration, not a durable run artifact, so it carries a 'schema' marker and a version but not common's envelope.",
   "type": "object",
   "additionalProperties": false,
+  "x-validator-rule": "constitution-article.file-named-by-id",
   "required": ["schema", "schema_version", "id", "version", "theme", "tier", "source", "principle", "why", "triggers"],
   "properties": {
     "schema": { "const": "constitution-article" },
@@ -28,7 +29,8 @@
     },
     "source": {
       "description": "Where the article's text comes from. The quote is the source's own words, never a paraphrase.",
-      "$ref": "#/$defs/source_span"
+      "$ref": "#/$defs/source_span",
+      "x-validator-rule": "constitution-article.source-span-resolves"
     },
     "principle": {
       "description": "The rule in one sentence.",
@@ -55,7 +57,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/exception" }
     },
-    "related": { "$ref": "#/$defs/related" },
+    "related": {
+      "$ref": "#/$defs/related",
+      "x-validator-rule": "constitution-article.related-ids-resolve-and-tie-breakers-do-not-cycle"
+    },
     "triggers": { "$ref": "#/$defs/triggers" },
     "enforced_by": {
       "description": "What covers which obligation. An absent or empty list means nothing covers the article, which a coverage report lists rather than hides.",
@@ -110,7 +115,8 @@
       "properties": {
         "id": {
           "description": "Unique within the article; 'enforced_by' entries name it.",
-          "$ref": "common.schema.json#/$defs/kebab_id"
+          "$ref": "common.schema.json#/$defs/kebab_id",
+          "x-validator-rule": "constitution-article.obligation-ids-unique"
         },
         "text": { "$ref": "common.schema.json#/$defs/nonempty_string" }
       }
@@ -207,7 +213,8 @@
         },
         "covers": {
           "description": "The id of the 'do' or 'dont' obligation this entry covers.",
-          "$ref": "common.schema.json#/$defs/kebab_id"
+          "$ref": "common.schema.json#/$defs/kebab_id",
+          "x-validator-rule": "constitution-article.covers-names-an-obligation"
         },
         "predicate": {
           "description": "The exact predicate the mechanism verifies, which may be narrower than the obligation it covers.",

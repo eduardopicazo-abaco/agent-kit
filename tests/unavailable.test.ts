@@ -259,6 +259,12 @@ describe("every skip in the validator is classified, so a new one cannot default
     "profile.capability-vocabulary-unavailable": ["unavailable"],
     // Both, and which one depends on whether any open entry went unexamined.
     "defects.contract-unreadable": ["skipped", "unavailable"],
+    // The record names a registry in another repository or a package, so the
+    // articles are not in reach of the run: the subject is what is missing.
+    "constitution.registry-not-local": ["skipped"],
+    // The registry is in reach and the schemas it is judged against did not
+    // compile: the subject is present and its authority is not.
+    "constitution.schema-unavailable": ["unavailable"],
   };
 
   /** Every `rule -> kinds` pair actually written in `src/`, sorted for comparison. */

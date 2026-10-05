@@ -147,6 +147,17 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
     "provenance.malformed-source",
   ],
 
+  // constitution-article.schema.json -- checked only on a registry a project
+  // record names (`ak validate --project`).
+  "constitution-article.file-named-by-id": ["constitution.article-file-name"],
+  "constitution-article.source-span-resolves": ["constitution.source-span-unresolved"],
+  "constitution-article.related-ids-resolve-and-tie-breakers-do-not-cycle": [
+    "constitution.unknown-related-id",
+    "constitution.tie-breaker-cycle",
+  ],
+  "constitution-article.obligation-ids-unique": ["constitution.duplicate-obligation-id"],
+  "constitution-article.covers-names-an-obligation": ["constitution.unknown-obligation"],
+
   // plan-record.schema.json
   "plan-record.specification-approval-binds-to-the-specification-hash": [
     "plan-record.specification-hash-mismatch",

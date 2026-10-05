@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { attach, formatAttachResult } from "./attach/index.ts";
@@ -51,6 +51,7 @@ const USAGE = [
   "ak — the agent-kit contract tool",
   "",
   "  ak validate [--profile <id>] [--json]      check the tree against catalog.yaml",
+  "  ak validate --project <path>               also check the constitution registry the record names",
   "  ak validate --skill-style                  print only the skill-authoring style warnings",
   "  ak build [--check] [--profile <id>|all]    emit dist/claude-code and dist/codex",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
@@ -173,7 +174,11 @@ function buildOptions(parsed: Parsed): BuildOptions {
 }
 
 function validate(parsed: Parsed, options: CliOptions): number {
-  const result = runValidation(options.cwd, { build: buildOptions(parsed) });
+  const project = parsed.flags.get("project");
+  const result = runValidation(options.cwd, {
+    build: buildOptions(parsed),
+    project: project === undefined || project === true ? undefined : resolve(options.cwd, project),
+  });
   const install = result.catalog === null ? undefined : loadInstallConfig(options.cwd, result.catalog);
   // `--skill-style` narrows what is *printed* to the skill-authoring style
   // warnings alone; it never narrows what the exit code answers for. Those
