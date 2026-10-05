@@ -1,0 +1,5 @@
+{
+  "why": "A relative file_path resolves against the payload's cwd",
+  "decision": "deny",
+  "rule": "protected.tests"
+}

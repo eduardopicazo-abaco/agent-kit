@@ -1,0 +1,5 @@
+{
+  "why": "A payload that is not JSON is denied",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

@@ -1,0 +1,6 @@
+{
+  "why": "git -c before the subcommand does not hide --no-verify",
+  "decision": "deny",
+  "rule": "guard.git-no-verify",
+  "receipt": "claude-code-5"
+}

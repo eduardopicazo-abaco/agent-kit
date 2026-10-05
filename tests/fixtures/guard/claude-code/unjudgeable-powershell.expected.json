@@ -1,0 +1,5 @@
+{
+  "why": "The evaluator lexes POSIX shell only",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

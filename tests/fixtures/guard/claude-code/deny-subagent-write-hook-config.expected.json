@@ -1,0 +1,5 @@
+{
+  "why": "A subagent call is judged the same as a main-thread call",
+  "decision": "deny",
+  "rule": "protected.hook-config"
+}

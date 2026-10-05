@@ -1,0 +1,6 @@
+{
+  "why": "git -C escapes a Bash(git push *) rule (claude-code-5); the guard skips global options and reaches the push rule",
+  "decision": "deny",
+  "rule": "destructive.git-push-force",
+  "receipt": "claude-code-5"
+}

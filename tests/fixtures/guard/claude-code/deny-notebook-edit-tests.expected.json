@@ -1,0 +1,5 @@
+{
+  "why": "A notebook under tests is a test",
+  "decision": "deny",
+  "rule": "protected.tests"
+}

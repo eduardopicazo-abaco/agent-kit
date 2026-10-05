@@ -1,0 +1,9 @@
+{
+  "why": "A hook that times out does not block the call on Claude Code, so a call the guard would deny runs; the guard is feedback, never the boundary (C:L63)",
+  "decision": "fail-open",
+  "when_answered": {
+    "decision": "deny",
+    "rule": "destructive.rm-recursive-force"
+  },
+  "receipt": "claude-code-1"
+}

@@ -1,0 +1,5 @@
+{
+  "why": "Creating a link inside a protected path is a write to it",
+  "decision": "deny",
+  "rule": "protected.tests"
+}

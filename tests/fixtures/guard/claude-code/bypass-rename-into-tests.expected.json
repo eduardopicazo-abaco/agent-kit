@@ -1,0 +1,5 @@
+{
+  "why": "A rename whose destination is protected is a write to it",
+  "decision": "deny",
+  "rule": "protected.tests"
+}

@@ -1,0 +1,5 @@
+{
+  "why": "A recursive forced delete matches a destructive pattern",
+  "decision": "deny",
+  "rule": "destructive.rm-recursive-force"
+}

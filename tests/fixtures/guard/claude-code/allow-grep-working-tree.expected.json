@@ -1,0 +1,4 @@
+{
+  "why": "Grep with no path searches the working tree, as grep -r needle . does",
+  "decision": "allow"
+}

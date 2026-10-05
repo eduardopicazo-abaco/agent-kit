@@ -1,0 +1,5 @@
+{
+  "why": "A Write without file_path cannot be judged",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

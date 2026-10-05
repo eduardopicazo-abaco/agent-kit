@@ -1,0 +1,5 @@
+{
+  "why": "An empty payload is not JSON",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

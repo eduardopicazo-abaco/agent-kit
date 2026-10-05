@@ -13,6 +13,7 @@ import { spawnSync } from "node:child_process";
 import { attach, formatAttachResult } from "./attach/index.ts";
 import { scoreDelegationFiles } from "./delegation.ts";
 import { runFirstmate } from "./firstmate/cli.ts";
+import { readGuardStdin, runGuard } from "./guard/cli.ts";
 import { main as runLifecycle } from "./lifecycle/gate.ts";
 import { readHookStdin, runLearn } from "./learn/cli.ts";
 import { runRunner } from "./runner/cli.ts";
@@ -43,7 +44,7 @@ export interface CliIo {
 export interface CliOptions {
   cwd: string;
   io: CliIo;
-  /** A host hook's JSON payload, read from stdin by the entrypoint for `ak learn hook`. */
+  /** A host hook's JSON payload, read from stdin by the entrypoint for `ak learn hook` and `ak guard hook`. */
   stdin?: string;
 }
 
@@ -61,6 +62,7 @@ const USAGE = [
   "  ak doctor                                  inspect the installed hosts and current project",
   "  ak update                                  refresh installed ak plugins to the published version",
   "  ak learn <area> <verb> ...                 the opt-in learning runtime (`ak learn` for help)",
+  "  ak guard hook <event> ...                  the opt-in guard runtime's host hook (`ak guard` for help)",
   "  ak runner serve|call ...                   runner service and charter-bound requests",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
@@ -333,6 +335,9 @@ export function runCli(argv: readonly string[], options: CliOptions): number {
   if (argv[0] === "learn") {
     return runLearn(argv.slice(1), { cwd: options.cwd, io: options.io, stdin: options.stdin });
   }
+  if (argv[0] === "guard") {
+    return runGuard(argv.slice(1), { cwd: options.cwd, io: options.io, stdin: options.stdin });
+  }
   const parsed = parse(argv);
   for (const token of parsed.unknown) options.io.err(`ak: ${token} needs a value`);
   if (parsed.unknown.length > 0) return 2;
@@ -364,6 +369,6 @@ if (import.meta.main) {
   const code =
     argv[0] === "runner"
       ? await runRunner(argv.slice(1), io)
-      : runCli(argv, { cwd: process.cwd(), io, stdin: readHookStdin(argv) });
+      : runCli(argv, { cwd: process.cwd(), io, stdin: readHookStdin(argv) ?? readGuardStdin(argv) });
   if (argv[0] !== "runner" || argv[1] !== "serve" || code !== 0) process.exit(code);
 }

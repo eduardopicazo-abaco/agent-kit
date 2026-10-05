@@ -1,0 +1,4 @@
+{
+  "why": "Running a test reads it; only writing a test is protected",
+  "decision": "allow"
+}

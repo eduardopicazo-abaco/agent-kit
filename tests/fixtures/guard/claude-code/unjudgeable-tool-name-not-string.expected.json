@@ -1,0 +1,5 @@
+{
+  "why": "A tool_name that is not a string is no tool_name",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

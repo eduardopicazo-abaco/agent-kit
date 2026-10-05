@@ -1,0 +1,5 @@
+{
+  "why": "git mv into a protected path is a write to it",
+  "decision": "deny",
+  "rule": "protected.ci-config"
+}

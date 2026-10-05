@@ -1,8 +1,10 @@
+import { join } from "node:path";
+import Ajv2020 from "ajv/dist/2020.js";
 import type { ValidateFunction } from "ajv";
+import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 
 import { readTextIfPresent } from "../util/fs.ts";
-import { compileSchemas } from "../validation/schemas.ts";
 import { error, type Issue } from "../validation/types.ts";
 import { compileGlob } from "./glob.ts";
 
@@ -151,6 +153,26 @@ export function parseGuardPolicy(text: string, validate: ValidateFunction, file:
 }
 
 /**
+ * The validator for schemas/guard-policy.schema.json, compiled with only the
+ * schema it references (common) rather than the whole set: `ak guard hook`
+ * loads the policy on every tool call, and compiling every schema costs it
+ * most of a second. Undefined when either file is missing or does not compile.
+ */
+export function guardPolicyValidator(schemaRoot: string): ValidateFunction | undefined {
+  const common = readTextIfPresent(join(schemaRoot, "schemas", "common.schema.json"));
+  const own = readTextIfPresent(join(schemaRoot, "schemas", `${SCHEMA_ID}.schema.json`));
+  if (common === null || own === null) return undefined;
+  try {
+    const ajv = new Ajv2020({ strict: false, allErrors: true, validateFormats: true });
+    addFormats(ajv);
+    ajv.addSchema(JSON.parse(common));
+    return ajv.compile(JSON.parse(own));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Read and check the policy at `file`. `schemaRoot` is this package's tree,
  * where the schema lives, not the project the policy is about.
  */
@@ -159,7 +181,7 @@ export function loadGuardPolicy(file: string, schemaRoot: string): PolicyResult 
   if (text === null) {
     return { policy: null, issues: [error("guard.policy-missing", file, "No guard policy file at this path.")] };
   }
-  const validate = compileSchemas(schemaRoot).validatorFor(SCHEMA_ID);
+  const validate = guardPolicyValidator(schemaRoot);
   if (validate === undefined) {
     return {
       policy: null,

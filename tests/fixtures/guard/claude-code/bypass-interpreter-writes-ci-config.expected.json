@@ -1,0 +1,6 @@
+{
+  "why": "Read and Edit rules miss a subprocess that opens files itself (claude-code-5); inline code naming a protected path is denied",
+  "decision": "deny",
+  "rule": "protected.ci-config",
+  "receipt": "claude-code-5"
+}

@@ -1,0 +1,4 @@
+{
+  "why": "A tool that names no file is not judged by the guard",
+  "decision": "allow"
+}

@@ -1,0 +1,5 @@
+{
+  "why": "A payload without tool_name is denied",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

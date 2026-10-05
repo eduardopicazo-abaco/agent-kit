@@ -1,0 +1,8 @@
+{
+  "why": "A file tool's path is followed through a link; this one leads into tests",
+  "decision": "deny",
+  "rule": "protected.tests",
+  "links": {
+    "/work/repo/src/parser-fixture.ts": "/work/repo/tests/unit/parser.fixture.test.ts"
+  }
+}

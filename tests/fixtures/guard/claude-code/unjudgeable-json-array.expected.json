@@ -1,0 +1,5 @@
+{
+  "why": "A JSON value that is not an object carries no tool_name",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

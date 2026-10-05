@@ -1,0 +1,5 @@
+{
+  "why": "A Bash call without a command string cannot be judged",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

@@ -1,0 +1,6 @@
+{
+  "why": "An interpreter writing a protected test file is denied",
+  "decision": "deny",
+  "rule": "protected.tests",
+  "receipt": "claude-code-5"
+}

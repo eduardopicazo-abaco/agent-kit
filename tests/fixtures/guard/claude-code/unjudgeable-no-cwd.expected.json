@@ -1,0 +1,5 @@
+{
+  "why": "A judged call without an absolute cwd cannot place its paths",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

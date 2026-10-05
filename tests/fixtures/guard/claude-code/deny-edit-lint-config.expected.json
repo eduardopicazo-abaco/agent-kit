@@ -1,0 +1,5 @@
+{
+  "why": "Lint configuration is protected",
+  "decision": "deny",
+  "rule": "protected.lint-config"
+}

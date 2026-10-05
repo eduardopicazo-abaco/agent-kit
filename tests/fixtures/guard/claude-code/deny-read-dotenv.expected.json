@@ -1,0 +1,5 @@
+{
+  "why": "Reading an environment file is a secret read",
+  "decision": "deny",
+  "rule": "secret.dotenv"
+}

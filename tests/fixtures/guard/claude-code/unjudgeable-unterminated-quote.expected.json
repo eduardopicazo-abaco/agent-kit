@@ -1,0 +1,5 @@
+{
+  "why": "Shell text that does not parse is denied",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

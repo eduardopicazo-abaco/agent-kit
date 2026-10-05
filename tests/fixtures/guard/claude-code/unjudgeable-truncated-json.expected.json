@@ -1,0 +1,5 @@
+{
+  "why": "A payload cut off mid-object is not JSON",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

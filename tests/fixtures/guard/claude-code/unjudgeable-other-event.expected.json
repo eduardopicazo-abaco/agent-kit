@@ -1,0 +1,5 @@
+{
+  "why": "A payload for another event is not a PreToolUse call",
+  "decision": "deny",
+  "rule": "guard.unjudgeable"
+}

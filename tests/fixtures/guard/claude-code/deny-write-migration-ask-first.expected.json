@@ -1,0 +1,5 @@
+{
+  "why": "An ask-first path is denied while no grant exists",
+  "decision": "deny",
+  "rule": "tier.migrations"
+}
